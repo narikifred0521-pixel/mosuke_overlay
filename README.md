@@ -30,4 +30,14 @@ MöSUKE（全14種目・ステージ突破方式）のライブ配信用オー�
 
 ## 同期
 
-今は BroadcastChannel + localStorage（同じPC・同じOBS内）。スマホから操作するなら Firebase Realtime DB を足す。
+- 同じPC内（OBSのカスタムドック＋ブラウザソース）: BroadcastChannel + localStorage。設定不要
+- スマホ・別PC: 設定タブ「スマホ同期」でルーム名を入れる。オーバーレイは `overlay.html?room=ルーム名`
+  - DBはもるまさスコアと同じ Firebase Realtime DB（`mosuke_overlay/<ルーム名>/state` と `/config`）
+  - Firebaseコンソールで Realtime Database のルールに以下を追加する必要がある
+
+```json
+"mosuke_overlay": {
+  ".read": true,
+  ".write": true
+}
+```

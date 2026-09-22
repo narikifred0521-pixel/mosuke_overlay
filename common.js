@@ -1,7 +1,8 @@
 // MöSUKE 配信オーバーレイ 共通：大会データ・状態・同期
 // control.html（操作）→ overlay.html（OBSブラウザソース）へ状態を送る。
 // 同期は BroadcastChannel + localStorage（同じブラウザ／OBSのカスタムドック同士で動く）。
-// スマホ操作にするときは Firebase を足す（もるまさスコアと同じ方式）。
+// ルーム名を設定すると Firebase Realtime DB でも同期する（スマホ操作・別PC用。もるまさスコアと同じDB）。
+//   操作パネル: 設定タブ「スマホ同期」でルーム名を入れる / オーバーレイ: overlay.html?room=ルーム名
 
 const STAGES = [
   { key: "1", label: "1st Stage", short: "1st" },
@@ -100,12 +101,49 @@ const cfgChan = "BroadcastChannel" in window ? new BroadcastChannel("mosuke_over
 function saveConfig(c) {
   try { localStorage.setItem(CFG_KEY, JSON.stringify(c)); } catch (e) {}
   if (cfgChan) cfgChan.postMessage(1);
+  fbWrite("config", c);
 }
 
 // 設定が変わったら読み込み直す（オーバーレイ側）
 function onConfig(cb) {
   if (cfgChan) cfgChan.onmessage = cb;
   window.addEventListener("storage", (e) => { if (e.key === CFG_KEY) cb(); });
+  fbListen("config", (c) => {
+    const txt = JSON.stringify(c);
+    if (txt === localStorage.getItem(CFG_KEY)) return; // 自分の書き込み・同じ内容なら何もしない
+    try { localStorage.setItem(CFG_KEY, txt); } catch (e) {}
+    cb();
+  });
+}
+
+// ── Firebase 同期（ルーム名があるときだけ） ──────────────
+const FB_URL = "https://morumasa-score-4818b-default-rtdb.asia-southeast1.firebasedatabase.app";
+const ROOM_KEY = "mosuke_overlay_room";
+const ROOM = (new URLSearchParams(location.search).get("room") || (() => { try { return localStorage.getItem(ROOM_KEY); } catch (e) { return ""; } })() || "")
+  .replace(/[^\w-]/g, "");
+let fbDb = null;
+let fbStatus = ROOM ? "接続中…" : "オフ";
+const fbStatusCbs = [];
+function setFbStatus(t) { fbStatus = t; fbStatusCbs.forEach((f) => f(t)); }
+
+if (ROOM && window.firebase) {
+  try {
+    firebase.initializeApp({ databaseURL: FB_URL });
+    fbDb = firebase.database();
+    fbDb.ref(".info/connected").on("value", (s) => setFbStatus(s.val() ? "接続OK" : "接続中…"));
+  } catch (e) { setFbStatus("エラー"); }
+}
+
+function fbWrite(kind, data) {
+  if (!fbDb) return;
+  fbDb.ref(`mosuke_overlay/${ROOM}/${kind}`).set(JSON.parse(JSON.stringify(data)))
+    .catch(() => setFbStatus("書き込み不可（DBのルール未設定）"));
+}
+
+function fbListen(kind, cb) {
+  if (!fbDb) return;
+  fbDb.ref(`mosuke_overlay/${ROOM}/${kind}`).on("value", (s) => { if (s.val()) cb(s.val()); },
+    () => setFbStatus("読み込み不可（DBのルール未設定）"));
 }
 
 applyConfig(loadConfig());
@@ -127,27 +165,58 @@ function blankState() {
   };
 }
 
+// Firebase は空の配列・オブジェクトを消し、数字キーを配列にするので、受け取ったら形を整える
+function normalizeState(s) {
+  s = Object.assign(blankState(), s);
+  s.show = Object.assign(blankState().show, s.show);
+  const obj = (x) => (x ? Object.assign({}, x) : {});
+  s.rec = obj(s.rec); s.fin = obj(s.fin);
+  for (const no in s.rec) {
+    if (!s.rec[no]) { delete s.rec[no]; continue; }
+    s.rec[no] = obj(s.rec[no]);
+    for (const id in s.rec[no]) s.rec[no][id] = { log: (s.rec[no][id] && s.rec[no][id].log) || [] };
+  }
+  for (const no in s.fin) {
+    if (!s.fin[no]) { delete s.fin[no]; continue; }
+    s.fin[no] = Object.assign({ start: 0, stop: 0, score: 0, streak: 0, log: [], dq: "" }, s.fin[no]);
+  }
+  return s;
+}
+
 function loadState() {
   try {
     const s = JSON.parse(localStorage.getItem(STORE_KEY));
-    if (s && s.rec) return Object.assign(blankState(), s);
+    if (s) { lastStateT = s.t || 0; return normalizeState(s); }
   } catch (e) {}
   return blankState();
 }
 
 const chan = "BroadcastChannel" in window ? new BroadcastChannel("mosuke_overlay") : null;
 
+let lastStateT = 0;
+
 function saveState(S) {
   S.t = Date.now();
+  lastStateT = S.t;
   try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {}
   if (chan) chan.postMessage(S);
+  fbWrite("state", S);
 }
 
+// 新しいものだけ受け取る（同じ更新が BroadcastChannel と Firebase の両方から届くため）
 function onState(cb) {
-  if (chan) chan.onmessage = (e) => cb(e.data);
+  const take = (s) => {
+    if (!s || !(s.t > lastStateT)) return;
+    lastStateT = s.t;
+    s = normalizeState(s);
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(s)); } catch (e) {}
+    cb(s);
+  };
+  if (chan) chan.onmessage = (e) => take(e.data);
   window.addEventListener("storage", (e) => {
-    if (e.key === STORE_KEY && e.newValue) cb(JSON.parse(e.newValue));
+    if (e.key === STORE_KEY && e.newValue) take(JSON.parse(e.newValue));
   });
+  fbListen("state", take);
 }
 
 // ── 判定 ─────────────────────────────────────────

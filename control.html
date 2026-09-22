@@ -86,7 +86,7 @@
 </style>
 </head>
 <body>
-<header><img src="logo.png" alt="MöSUKE"><h1>配信オーバーレイ 操作パネル</h1><a href="overlay.html?bg=1" target="_blank">オーバーレイを開く ↗</a></header>
+<header><img src="logo.png" alt="MöSUKE"><h1>操作パネル <span id="roomTag" style="color:var(--gold)"></span></h1><a href="overlay.html?bg=1" target="_blank">オーバーレイを開く ↗</a></header>
 
 <nav class="tabs"><button class="tab on" data-tab="op">操作</button><button class="tab" data-tab="cfg">設定</button></nav>
 <div id="pageOp">
@@ -131,6 +131,13 @@
   </section>
 
   <section>
+    <h2><span>スマホ同期（Firebase）</span><span id="fbStat"></span></h2>
+    <div class="frow" style="grid-template-columns:1fr 1fr"><input id="roomIn" placeholder="ルーム名（例: mosuke2026）"><button class="tg on" id="roomSave">この名前で同期</button></div>
+    <p class="hint">スマホとOBSで<b>同じルーム名</b>にすると、別の端末同士でも同期する。空にして保存すると同期オフ。<br>
+      OBSのブラウザソースURL: <span id="obsUrl" style="color:var(--white);word-break:break-all"></span></p>
+  </section>
+
+  <section>
     <h2>バックアップ</h2>
     <div class="danger"><button id="cfgExport">設定を書き出す</button><button id="cfgImportBtn">読み込む</button><button id="cfgDefault">初期値に戻す</button></div>
     <input type="file" id="cfgImport" accept="application/json" hidden>
@@ -139,7 +146,9 @@
   <div class="savebar"><span id="cfgMsg"></span><button id="cfgSave">保存してオーバーレイに反映</button></div>
 </div>
 
-<script src="common.js?v=4"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="common.js?v=5"></script>
 <script>
   let S = loadState();
   const $ = (id) => document.getElementById(id);
@@ -320,7 +329,16 @@
   let C = loadConfig();
   const esc = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 
+  function renderSync() {
+    $("roomIn").value = ROOM;
+    $("fbStat").textContent = fbStatus;
+    $("fbStat").style.color = fbStatus === "接続OK" ? "var(--gold)" : fbStatus === "オフ" ? "var(--gray)" : "var(--red)";
+    $("obsUrl").textContent = new URL("overlay.html" + (ROOM ? "?room=" + ROOM : ""), location.href).href;
+  }
+  fbStatusCbs.push(() => { if (!$("pageCfg").hidden) renderSync(); });
+
   function renderCfg() {
+    renderSync();
     document.querySelectorAll("#cfgHud button").forEach((b) => b.classList.toggle("on", b.dataset.hud === C.layout.hud));
     $("cfgCount").textContent = `${C.players.length} 人`;
     $("cfgPlayers").innerHTML = C.players.map((p, i) => `<div class="prow" data-i="${i}">
@@ -410,6 +428,13 @@
       return cfgMsg(`${list.length}人を読み込みました（まだ保存していません）`);
     }
     if (t.id === "cfgSave") return saveCfg();
+    if (t.id === "roomSave") {
+      const room = $("roomIn").value.trim().replace(/[^\w-]/g, "");
+      try { room ? localStorage.setItem(ROOM_KEY, room) : localStorage.removeItem(ROOM_KEY); } catch (err) {}
+      const u = new URL(location.href); u.searchParams.delete("room");
+      location.href = u.href; // 読み込み直して接続し直す
+      return;
+    }
     if (t.id === "cfgDefault") {
       if (!confirm("設定を初期値（第1回の12人・現行ルール）に戻しますか？ 保存するまで反映されません。")) return;
       C = defaultConfig(); renderCfg(); return cfgMsg("初期値に戻しました（まだ保存していません）");
@@ -437,10 +462,17 @@
     e.target.value = "";
   });
 
+  if (ROOM) {
+    $("roomTag").textContent = "● " + ROOM;
+    document.querySelector("header a").href = "overlay.html?bg=1&room=" + ROOM;
+  }
   onState((s) => { S = s; render(); });
   onConfig(() => { applyConfig(loadConfig()); if (!$("pageCfg").hidden) { C = loadConfig(); renderCfg(); } render(); });
   if (!playerByNo(S.player)) S.player = PLAYERS[0].no;
   render();
+  if (fbDb) fbDb.ref(`mosuke_overlay/${ROOM}`).once("value").then((snap) => {
+    if (!snap.val()) { saveConfig(loadConfig()); saveState(S); }
+  }).catch(() => setFbStatus("読み込み不可（DBのルール未設定）"));
 </script>
 </body>
 </html>
