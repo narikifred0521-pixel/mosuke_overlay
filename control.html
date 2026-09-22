@@ -60,12 +60,36 @@
   .danger { display: flex; gap: 8px; }
   .danger button { flex: 1; background: transparent; border: 1px solid var(--line); border-radius: 10px; padding: 10px 0; font-size: 13px; color: var(--gray); }
   .hint { font-size: 12px; color: var(--gray); margin-top: 8px; line-height: 1.6; }
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+  .tab { background: var(--card); border-radius: 10px; padding: 12px 0; font-size: 15px; font-weight: 800; color: var(--gray); }
+  .tab.on { background: var(--gold); color: var(--navy); }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .seg button { background: var(--navy2); border-radius: 10px; padding: 12px 0; font-weight: 800; color: var(--gray); }
+  .seg button.on { background: var(--white); color: var(--navy); }
+  input, textarea { font: inherit; color: var(--white); background: var(--navy); border: 1px solid var(--line); border-radius: 8px; padding: 8px; width: 100%; min-width: 0; }
+  textarea { font-size: 13px; margin-top: 6px; }
+  .prow { display: grid; grid-template-columns: 48px 1fr 1.4fr 32px; gap: 6px; margin-bottom: 6px; align-items: center; }
+  .prow input { padding: 7px 6px; font-size: 14px; }
+  .prow .del { background: transparent; color: var(--gray); font-size: 18px; }
+  .erow { display: grid; grid-template-columns: 34px 1fr; gap: 6px 8px; padding: 8px 0; border-top: 1px solid var(--line); align-items: center; }
+  .erow:first-child { border-top: 0; }
+  .erow .id { color: var(--gold); font-size: 16px; grid-row: span 2; }
+  .erow .two { display: grid; grid-template-columns: 1fr 76px; gap: 6px; }
+  .erow input { padding: 7px 6px; font-size: 14px; }
+  .erow small { display: block; font-size: 11px; color: var(--gray); margin-bottom: 2px; }
+  .frow { display: grid; grid-template-columns: 1fr 110px; gap: 8px; align-items: center; margin-bottom: 8px; font-size: 14px; }
+  details summary { font-size: 13px; color: var(--gold); margin-top: 10px; cursor: pointer; }
+  .savebar { position: sticky; bottom: 0; display: flex; align-items: center; gap: 10px; background: var(--navy); padding: 10px 0; }
+  .savebar span { flex: 1; font-size: 13px; color: var(--gold); }
+  .savebar button { background: var(--gold); color: var(--navy); border-radius: 12px; padding: 14px 16px; font-weight: 900; font-size: 15px; }
   @keyframes glow { 50% { box-shadow: 0 0 0 3px rgba(31,157,99,.5); } }
 </style>
 </head>
 <body>
 <header><img src="logo.png" alt="MöSUKE"><h1>配信オーバーレイ 操作パネル</h1><a href="overlay.html?bg=1" target="_blank">オーバーレイを開く ↗</a></header>
 
+<nav class="tabs"><button class="tab on" data-tab="op">操作</button><button class="tab" data-tab="cfg">設定</button></nav>
+<div id="pageOp">
 <section><h2>表示</h2><div class="grid toggles" id="toggles"></div></section>
 <section><h2><span>挑戦中の選手</span><span id="alive"></span></h2><div class="grid players" id="players"></div></section>
 <section><h2>種目</h2><div id="events"></div></section>
@@ -75,8 +99,47 @@
   <div class="danger"><button id="resetEv">この種目をやり直す</button><button id="resetAll">全データ消去</button></div>
   <p class="hint">記録はこのブラウザに保存されます。OBSのカスタムドックに control.html、ブラウザソースに overlay.html（1920×1080）を入れると同期します。</p>
 </section>
+</div>
 
-<script src="common.js"></script>
+<div id="pageCfg" hidden>
+  <section><h2>種目表示の位置</h2><div class="seg" id="cfgHud">
+    <button data-hud="br">右下</button><button data-hud="tl">左上</button></div></section>
+
+  <section>
+    <h2><span>選手</span><span id="cfgCount"></span></h2>
+    <div id="cfgPlayers"></div>
+    <div class="sub"><button id="cfgAddP">＋ 選手を追加</button></div>
+    <details><summary>まとめて貼り付け</summary>
+      <p class="hint">1行に1人、「番号 → 名前 → 肩書き」の順に、タブかカンマで区切る。スプレッドシートからコピーしてそのまま貼れる。貼ると今の名簿と入れ替わる。前の大会の記録が残っているときは、操作タブの「全データ消去」もしておく。</p>
+      <textarea id="cfgPaste" rows="6" placeholder="1	渡辺達也	森下一派&#10;2	なぎ	なぎちゃんず"></textarea>
+      <div class="sub"><button id="cfgPasteApply">名簿を入れ替える</button></div>
+    </details>
+  </section>
+
+  <section>
+    <h2>種目ルール</h2>
+    <p class="hint" style="margin:0 0 8px">段階はカンマ区切り（例: 4m,6m,8m）。段階の数＝クリアに必要な数。ミスはその回数までOK。</p>
+    <div id="cfgEvents"></div>
+  </section>
+
+  <section>
+    <h2>FINAL（タイムアタック）</h2>
+    <div class="frow"><label>制限時間（秒）</label><input type="number" id="cfgLimit" min="1"></div>
+    <div class="frow"><label>目標点</label><input type="number" id="cfgGoal" min="1"></div>
+    <div class="frow"><label>超えたら戻る点</label><input type="number" id="cfgBurst" min="0"></div>
+    <div class="frow"><label>連続ミスで失格</label><input type="number" id="cfgMissDq" min="1"></div>
+  </section>
+
+  <section>
+    <h2>バックアップ</h2>
+    <div class="danger"><button id="cfgExport">設定を書き出す</button><button id="cfgImportBtn">読み込む</button><button id="cfgDefault">初期値に戻す</button></div>
+    <input type="file" id="cfgImport" accept="application/json" hidden>
+    <p class="hint">別のPC（配信PC）に同じ設定を入れるときは、書き出したファイルを読み込む。</p>
+  </section>
+  <div class="savebar"><span id="cfgMsg"></span><button id="cfgSave">保存してオーバーレイに反映</button></div>
+</div>
+
+<script src="common.js?v=3"></script>
 <script>
   let S = loadState();
   const $ = (id) => document.getElementById(id);
@@ -139,7 +202,7 @@
     let score = 0, streak = 0;
     for (const p of f.log) {
       if (p === 0) streak++;
-      else { streak = 0; score += p; if (score > FINAL_GOAL) score = 25; }
+      else { streak = 0; score += p; if (score > FINAL_GOAL) score = FINAL_BURST; }
     }
     f.score = score; f.streak = streak;
   }
@@ -152,12 +215,12 @@
       if (!f.start || f.stop) return;
       f.log.push(val);
       recalcFinal(f);
-      if (f.streak >= 3) { f.dq = "3ミス連続で失格"; f.stop = Date.now(); }
+      if (f.streak >= FINAL_MISS_DQ) { f.dq = `${FINAL_MISS_DQ}ミス連続で失格`; f.stop = Date.now(); }
     }
     if (act === "goal") {
       if (!f.start || f.stop) return;
       f.stop = Date.now();
-      if (f.score !== FINAL_GOAL) f.dq = "50点になっていない";
+      if (f.score !== FINAL_GOAL) f.dq = `${FINAL_GOAL}点になっていない`;
     }
     S.fin[no] = f;
     const st = finStatus(S, no).status;
@@ -166,7 +229,7 @@
     commit(fx);
   }
 
-  // 1分10秒を過ぎたら自動で失格にする（操作パネル側だけで判定）
+  // 制限時間を過ぎたら自動で失格にする（操作パネル側だけで判定）
   setInterval(() => {
     const ev = evById(S.event);
     if (ev.final) {
@@ -194,7 +257,7 @@
     $("events").innerHTML = STAGES.map((st) => `<div class="stage-row"><span class="lbl en">${st.short}</span>${
       EVENTS.filter((e) => e.stage === st.key).map((e) => {
         const s = evStatus(S, S.player, e.id).status;
-        return `<button class="ebtn en ${s} ${e.id === S.event ? "sel" : ""}" data-e="${e.id}">${e.final ? "タイムアタック50" : e.id}</button>`;
+        return `<button class="ebtn en ${s} ${e.id === S.event ? "sel" : ""}" data-e="${e.id}">${e.final ? e.name : e.id}</button>`;
       }).join("")}</div>`).join("");
 
     const ev = evById(S.event), no = S.player;
@@ -203,13 +266,13 @@
       const f = finState(S, no), st = finStatus(S, no).status;
       $("op").innerHTML = head + `
         <div class="fin-time en" id="finT">${fmtTime(finElapsed(f))}</div>
-        <div class="fin-score"><b class="en">${f.score}</b> / 50点　連続ミス ${f.streak}/3 ${f.dq ? "　<b style='color:var(--red);font-size:16px'>" + f.dq + "</b>" : st === "clear" ? "　<b>成功！</b>" : ""}</div>
+        <div class="fin-score"><b class="en">${f.score}</b> / ${FINAL_GOAL}点　連続ミス ${f.streak}/${FINAL_MISS_DQ} ${f.dq ? "　<b style='color:var(--red);font-size:16px'>" + f.dq + "</b>" : st === "clear" ? "　<b>成功！</b>" : ""}</div>
         <div class="big"><button class="b-clear" data-f="start" ${f.start ? "disabled" : ""}>スタート</button>
           <button class="b-miss" data-f="goal" ${!f.start || f.stop ? "disabled" : ""}>赤ボタン<br><small style="font-size:14px">(ゴール)</small></button></div>
         <div class="grid pts">${[1,2,3,4,5,6,7,8,9,10,11,12].map((n) => `<button class="en" data-pt="${n}">${n}</button>`).join("")}</div>
         <div class="grid pts" style="grid-template-columns:1fr"><button class="m0" data-pt="0">ミス（0点）</button></div>
         <div class="sub"><button id="undo">↶ 1つ戻す</button></div>
-        <p class="hint">50点を超えたら25点に戻る／3ミス連続・1分10秒超えは自動で失格。</p>`;
+        <p class="hint">${FINAL_GOAL}点を超えたら${FINAL_BURST}点に戻る／${FINAL_MISS_DQ}ミス連続・${fmtLimit(FINAL_LIMIT_MS / 1000)}超えは自動で失格。</p>`;
     } else {
       const { clears, misses, status } = evStatus(S, no, ev.id);
       const done = status === "clear" || status === "fail";
@@ -253,7 +316,130 @@
     return "F";
   }
 
+  // ── 設定タブ ──────────────────────────────
+  let C = loadConfig();
+  const esc = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+
+  function renderCfg() {
+    document.querySelectorAll("#cfgHud button").forEach((b) => b.classList.toggle("on", b.dataset.hud === C.layout.hud));
+    $("cfgCount").textContent = `${C.players.length} 人`;
+    $("cfgPlayers").innerHTML = C.players.map((p, i) => `<div class="prow" data-i="${i}">
+      <input type="number" class="p-no" value="${esc(p.no)}" min="1"><input class="p-name" value="${esc(p.name)}" placeholder="名前">
+      <input class="p-title" value="${esc(p.title)}" placeholder="肩書き（なしでもOK）"><button class="del" data-delp="${i}">✕</button></div>`).join("");
+    $("cfgEvents").innerHTML = DEFAULT_EVENTS.filter((e) => !e.final).map((e) => {
+      const c = C.events[e.id];
+      return `<div class="erow" data-id="${e.id}"><span class="id en">${e.id}</span>
+        <input class="e-name" value="${esc(c.name)}">
+        <div class="two"><div><small>段階</small><input class="e-steps" value="${esc(c.steps.join(","))}"></div>
+          <div><small>ミス可</small><input type="number" class="e-miss" value="${c.miss}" min="0"></div></div></div>`;
+    }).join("");
+    $("cfgLimit").value = C.final.limitSec; $("cfgGoal").value = C.final.goal;
+    $("cfgBurst").value = C.final.burst; $("cfgMissDq").value = C.final.missDq;
+  }
+
+  // 画面の入力値を C に取り込む（追加・削除の前にも呼ぶ）
+  function readCfg() {
+    C.players = [...document.querySelectorAll(".prow")].map((r) => ({
+      no: parseInt(r.querySelector(".p-no").value, 10),
+      name: r.querySelector(".p-name").value.trim(),
+      title: r.querySelector(".p-title").value.trim(),
+    }));
+    document.querySelectorAll(".erow").forEach((r) => {
+      C.events[r.dataset.id] = {
+        name: r.querySelector(".e-name").value.trim(),
+        steps: r.querySelector(".e-steps").value.split(/[,、，]/).map((x) => x.trim()).filter(Boolean),
+        miss: parseInt(r.querySelector(".e-miss").value, 10),
+      };
+    });
+    C.final = { limitSec: +$("cfgLimit").value, goal: +$("cfgGoal").value, burst: +$("cfgBurst").value, missDq: +$("cfgMissDq").value };
+  }
+
+  function validateCfg() {
+    const nos = C.players.map((p) => p.no);
+    if (!C.players.length) return "選手が0人です";
+    if (C.players.some((p) => !(p.no > 0) || !p.name)) return "番号と名前が空の選手がいます";
+    if (new Set(nos).size !== nos.length) return "番号が重複しています";
+    for (const id in C.events) {
+      const e = C.events[id];
+      if (!e.name || !e.steps.length) return `${id} の種目名か段階が空です`;
+      if (!(e.miss >= 0)) return `${id} のミス可の数が不正です`;
+    }
+    const f = C.final;
+    if (!(f.limitSec > 0 && f.goal > 0 && f.burst >= 0 && f.burst < f.goal && f.missDq > 0)) return "FINALの数値を確認してください";
+    return "";
+  }
+
+  function cfgMsg(t) { $("cfgMsg").textContent = t; clearTimeout(cfgMsg.t); cfgMsg.t = setTimeout(() => ($("cfgMsg").textContent = ""), 4000); }
+
+  function saveCfg() {
+    readCfg();
+    const err = validateCfg();
+    if (err) return cfgMsg("⚠ " + err);
+    C.players.sort((a, b) => a.no - b.no);
+    saveConfig(C);
+    applyConfig(C);
+    if (!playerByNo(S.player)) { S.player = PLAYERS[0].no; saveState(S); }
+    renderCfg(); render();
+    cfgMsg("保存しました。オーバーレイに反映済み");
+  }
+
+  function parsePaste(text) {
+    return text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).map((l, i) => {
+      const c = l.split(/\t|,|，/).map((x) => x.trim());
+      const n = parseInt(c[0], 10);
+      return Number.isFinite(n) ? { no: n, name: c[1] || "", title: c.slice(2).join("／") } : { no: i + 1, name: c[0], title: c.slice(1).join("／") };
+    });
+  }
+
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest("button");
+    if (!t) return;
+    if (t.dataset.tab) {
+      document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("on", b === t));
+      $("pageOp").hidden = t.dataset.tab !== "op"; $("pageCfg").hidden = t.dataset.tab !== "cfg";
+      if (t.dataset.tab === "cfg") { C = loadConfig(); renderCfg(); }
+      return;
+    }
+    if (t.dataset.hud) { readCfg(); C.layout.hud = t.dataset.hud; return renderCfg(); }
+    if (t.dataset.delp) { readCfg(); C.players.splice(+t.dataset.delp, 1); return renderCfg(); }
+    if (t.id === "cfgAddP") { readCfg(); C.players.push({ no: Math.max(0, ...C.players.map((p) => p.no || 0)) + 1, name: "", title: "" }); return renderCfg(); }
+    if (t.id === "cfgPasteApply") {
+      const list = parsePaste($("cfgPaste").value);
+      if (!list.length) return cfgMsg("⚠ 貼り付け欄が空です");
+      readCfg(); C.players = list; $("cfgPaste").value = ""; renderCfg();
+      return cfgMsg(`${list.length}人を読み込みました（まだ保存していません）`);
+    }
+    if (t.id === "cfgSave") return saveCfg();
+    if (t.id === "cfgDefault") {
+      if (!confirm("設定を初期値（第1回の12人・現行ルール）に戻しますか？ 保存するまで反映されません。")) return;
+      C = defaultConfig(); renderCfg(); return cfgMsg("初期値に戻しました（まだ保存していません）");
+    }
+    if (t.id === "cfgExport") {
+      readCfg();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(C, null, 2)], { type: "application/json" }));
+      a.download = "mosuke_overlay_config.json"; a.click();
+      return;
+    }
+    if (t.id === "cfgImportBtn") return $("cfgImport").click();
+  });
+
+  $("cfgImport").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const j = JSON.parse(await file.text());
+      const d = defaultConfig();
+      C = { players: j.players || d.players, events: Object.assign(d.events, j.events || {}),
+        final: Object.assign(d.final, j.final || {}), layout: Object.assign(d.layout, j.layout || {}) };
+      renderCfg(); cfgMsg("読み込みました（まだ保存していません）");
+    } catch (err) { cfgMsg("⚠ ファイルを読めませんでした"); }
+    e.target.value = "";
+  });
+
   onState((s) => { S = s; render(); });
+  onConfig(() => { applyConfig(loadConfig()); if (!$("pageCfg").hidden) { C = loadConfig(); renderCfg(); } render(); });
+  if (!playerByNo(S.player)) S.player = PLAYERS[0].no;
   render();
 </script>
 </body>

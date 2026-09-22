@@ -53,6 +53,8 @@
   #hud.st-clear { box-shadow: 0 0 0 4px var(--gold), 0 10px 30px rgba(0,0,0,.35); }
   #hud.st-fail { box-shadow: 0 0 0 4px var(--red), 0 10px 30px rgba(0,0,0,.35); }
 
+  body.hud-tl #hud { right: auto; bottom: auto; left: 40px; top: 40px; }
+  body.hud-tl #hud.hide { transform: translateX(-40px); }
   /* Final用HUD */
   .fin-wrap { display: flex; align-items: flex-end; gap: 26px; margin-top: 14px; }
   .fin-time { font-size: 92px; line-height: .9; letter-spacing: -2px; font-variant-numeric: tabular-nums; }
@@ -110,6 +112,10 @@
   .bd-head b { font-size: 34px; color: var(--gold); }
   .bd-head span { font-size: 20px; color: var(--gray); font-weight: 700; }
   .bd-row { display: flex; align-items: center; height: 40px; border-radius: 8px; padding: 0 12px; gap: 14px; }
+  #board.many { width: 860px; }
+  #board.many .bd-rows { display: grid; grid-template-columns: 1fr 1fr; grid-auto-flow: column; column-gap: 12px; }
+  #board.many .bd-row { height: 34px; }
+  #board.many .bd-no { font-size: 24px; width: 38px; } #board.many .bd-name { font-size: 22px; } #board.many .bd-st { font-size: 17px; }
   .bd-row:nth-child(odd) { background: rgba(255,255,255,.04); }
   .bd-row.cur { background: rgba(240,180,41,.18); box-shadow: inset 4px 0 0 var(--gold); }
   .bd-row.out { opacity: .45; }
@@ -160,7 +166,7 @@
     <div class="fx-text"><div class="fx-main en"></div><div class="fx-sub"></div></div>
   </div>
 
-<script src="common.js"></script>
+<script src="common.js?v=3"></script>
 <script>
   if (new URLSearchParams(location.search).get("bg")) document.body.classList.add("bg");
 
@@ -183,13 +189,13 @@
       el.className = "layer" + (S.show.hud ? "" : " hide") + (st === "clear" ? " st-clear" : st === "fail" ? " st-fail" : "");
       el.innerHTML = head + `
         <div class="fin-wrap"><div class="fin-time en ${cls}" id="finTime">${fmtTime(ms)}</div>
-          <div class="fin-score" style="margin-left:auto"><b class="en">${f.score}</b><span class="en">/ 50</span></div></div>
+          <div class="fin-score" style="margin-left:auto"><b class="en">${f.score}</b><span class="en">/ ${FINAL_GOAL}</span></div></div>
         <div class="bar time ${cls}"><i id="finBar" style="width:${Math.min(100, ms / FINAL_LIMIT_MS * 100)}%"></i></div>
         <div class="bar"><i style="width:${f.score / FINAL_GOAL * 100}%"></i></div>
         <div class="hud-row"><div class="hud-label">ミス</div>
-          <div class="miss-dots">${[0, 1, 2].map((i) => `<div class="dot ${i < f.streak ? "on" : ""}"></div>`).join("")}</div>
+          <div class="miss-dots">${Array.from({ length: FINAL_MISS_DQ }, (_, i) => i).map((i) => `<div class="dot ${i < f.streak ? "on" : ""}"></div>`).join("")}</div>
           <div class="hud-note ${st === "clear" ? "clear" : st === "fail" ? "fail" : ""}">${
-            f.dq ? f.dq : st === "clear" ? "MöSUKE 完全制覇" : st === "fail" ? "失敗" : f.start ? "3連続で失格" : "スタート待ち"}</div></div>`;
+            f.dq ? f.dq : st === "clear" ? "MöSUKE 完全制覇" : st === "fail" ? "失敗" : f.start ? `${FINAL_MISS_DQ}連続で失格` : "スタート待ち"}</div></div>`;
       return;
     }
 
@@ -235,6 +241,7 @@
   function renderBoard() {
     const el = $("board");
     el.classList.toggle("hide", !S.show.board);
+    el.classList.toggle("many", PLAYERS.length > 14);
     const rows = PLAYERS.map((p) => {
       const pg = playerProgress(S, p.no);
       return `<div class="bd-row ${p.no === S.player ? "cur" : ""} ${pg.out ? "out" : ""}">
@@ -242,7 +249,7 @@
         <div class="bd-st ${pg.out ? "out" : "s" + pg.reached}">${pg.label}</div></div>`;
     }).join("");
     const alive = PLAYERS.filter((p) => !playerProgress(S, p.no).out).length;
-    el.innerHTML = `<div class="bd-head"><b class="en">PLAYERS</b><span>残り ${alive} / ${PLAYERS.length} 人</span></div>${rows}`;
+    el.innerHTML = `<div class="bd-head"><b class="en">PLAYERS</b><span>残り ${alive} / ${PLAYERS.length} 人</span></div><div class="bd-rows" style="grid-template-rows: repeat(${Math.ceil(PLAYERS.length / 2)}, auto)">${rows}</div>`;
   }
 
   function playFx() {
@@ -260,6 +267,7 @@
   }
 
   function render() {
+    if (!playerByNo(S.player)) S.player = PLAYERS[0].no;
     renderHud(); renderProgress(); renderPlayer(); renderBoard(); playFx();
     prev = JSON.parse(JSON.stringify(S));
   }
@@ -284,6 +292,8 @@
   }
 
   onState((s) => { S = s; render(); });
+  onConfig(() => location.reload());
+  document.body.classList.add("hud-" + LAYOUT.hud);
   render();
   requestAnimationFrame(tick);
 </script>

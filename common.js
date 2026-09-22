@@ -11,7 +11,7 @@ const STAGES = [
 ];
 
 // steps = クリアしていく順番のラベル（数＝必要クリア数）、miss = 許されるミス数
-const EVENTS = [
+let EVENTS = [
   { id: "1-1", stage: "1", name: "ステップバイステップ", kind: "順手", steps: ["4m", "6m", "8m"], miss: 2 },
   { id: "1-2", stage: "1", name: "ウッドボーン", kind: "縦", steps: ["3.5m", "4m", "4.5m"], miss: 2 },
   { id: "1-3", stage: "1", name: "スローアンドジェントル", kind: "手前取り", steps: ["4m", "4.5m", "5m"], miss: 2 },
@@ -28,10 +28,13 @@ const EVENTS = [
   { id: "F", stage: "F", name: "タイムアタック50", kind: "1分10秒以内", final: true },
 ];
 
-const FINAL_LIMIT_MS = 70 * 1000;
-const FINAL_GOAL = 50;
+let FINAL_LIMIT_MS = 70 * 1000;
+let FINAL_GOAL = 50;
+let FINAL_BURST = 25;   // 目標を超えたら戻る点数
+let FINAL_MISS_DQ = 3;  // この回数連続ミスで失格
+let LAYOUT = { hud: "br" }; // 種目HUDの位置: br=右下 / tl=左上
 
-const PLAYERS = [
+let PLAYERS = [
   { no: 1, name: "渡辺達也", title: "森下一派" },
   { no: 2, name: "なぎ", title: "なぎちゃんず／ALLINマネージャー" },
   { no: 3, name: "ゆうやん", title: "初代木龍／JO2023優勝" },
@@ -45,6 +48,67 @@ const PLAYERS = [
   { no: 11, name: "松原翔平", title: "2024年日本代表／JO2024優勝／Mr.MöSUKE" },
   { no: 12, name: "横山航大", title: "JO2026優勝／靴のモルタ勤務／モルクール指導員／モスケ君" },
 ];
+
+// ── 設定（操作パネルの「設定」タブで編集。上の値が初期値） ──────────
+const CFG_KEY = "mosuke_overlay_config_v1";
+const DEFAULT_EVENTS = JSON.parse(JSON.stringify(EVENTS));
+const DEFAULT_PLAYERS = JSON.parse(JSON.stringify(PLAYERS));
+
+function defaultConfig() {
+  return {
+    players: JSON.parse(JSON.stringify(DEFAULT_PLAYERS)),
+    events: Object.fromEntries(DEFAULT_EVENTS.filter((e) => !e.final).map((e) => [e.id, { name: e.name, steps: e.steps, miss: e.miss }])),
+    final: { limitSec: 70, goal: 50, burst: 25, missDq: 3 },
+    layout: { hud: "br" },
+  };
+}
+
+function loadConfig() {
+  const c = defaultConfig();
+  try {
+    const s = JSON.parse(localStorage.getItem(CFG_KEY));
+    if (s) {
+      if (Array.isArray(s.players)) c.players = s.players;
+      if (s.events) for (const id in c.events) Object.assign(c.events[id], s.events[id] || {});
+      Object.assign(c.final, s.final || {});
+      Object.assign(c.layout, s.layout || {});
+    }
+  } catch (e) {}
+  return c;
+}
+
+function applyConfig(c) {
+  PLAYERS = c.players.slice().sort((a, b) => a.no - b.no);
+  EVENTS = DEFAULT_EVENTS.map((e) => (e.final ? Object.assign({}, e) : Object.assign({}, e, c.events[e.id])));
+  FINAL_LIMIT_MS = c.final.limitSec * 1000;
+  FINAL_GOAL = c.final.goal;
+  FINAL_BURST = c.final.burst;
+  FINAL_MISS_DQ = c.final.missDq;
+  const fe = EVENTS.find((e) => e.final);
+  fe.name = `タイムアタック${FINAL_GOAL}`;
+  fe.kind = `${fmtLimit(c.final.limitSec)}以内`;
+  LAYOUT = c.layout;
+}
+
+function fmtLimit(sec) {
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return m ? `${m}分${s ? s + "秒" : ""}` : `${s}秒`;
+}
+
+const cfgChan = "BroadcastChannel" in window ? new BroadcastChannel("mosuke_overlay_cfg") : null;
+
+function saveConfig(c) {
+  try { localStorage.setItem(CFG_KEY, JSON.stringify(c)); } catch (e) {}
+  if (cfgChan) cfgChan.postMessage(1);
+}
+
+// 設定が変わったら読み込み直す（オーバーレイ側）
+function onConfig(cb) {
+  if (cfgChan) cfgChan.onmessage = cb;
+  window.addEventListener("storage", (e) => { if (e.key === CFG_KEY) cb(); });
+}
+
+applyConfig(loadConfig());
 
 // ── 状態 ─────────────────────────────────────────
 // S.rec[no][eventId] = { log: ["c","m",...] }  … 投擲ごとの記録（取り消しはpop）
