@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>MöSUKE 操作パネル</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@1,800;1,900&display=swap" rel="stylesheet">
+<style>
+  :root { --navy: #101A33; --navy2: #1B284A; --card: #202B4A; --red: #E01F33; --gold: #F0B429; --white: #F5F6FA;
+    --gray: #8A93AB; --line: #34406A; --green: #1F9D63; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { background: var(--navy); color: var(--white); font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
+    padding: 12px 12px 40px; max-width: 560px; margin: 0 auto; }
+  .en { font-family: "Barlow", sans-serif; font-style: italic; font-weight: 900; }
+  header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  header img { height: 40px; }
+  header h1 { font-size: 16px; color: var(--gray); font-weight: 700; }
+  header a { margin-left: auto; color: var(--gold); font-size: 13px; }
+  section { background: var(--card); border-radius: 14px; padding: 12px; margin-bottom: 12px; }
+  h2 { font-size: 13px; color: var(--gray); margin-bottom: 8px; font-weight: 700; display: flex; justify-content: space-between; }
+  button { font: inherit; color: inherit; border: 0; cursor: pointer; }
+  .grid { display: grid; gap: 6px; }
+  .players { grid-template-columns: repeat(4, 1fr); }
+  .pbtn { background: var(--navy2); border-radius: 10px; padding: 8px 4px; text-align: center; border: 2px solid transparent; }
+  .pbtn b { display: block; font-size: 20px; color: var(--gold); }
+  .pbtn span { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+  .pbtn.sel { border-color: var(--gold); background: #2d3a63; }
+  .pbtn.out { opacity: .4; }
+  .stage-row { display: flex; gap: 6px; margin-bottom: 6px; align-items: center; }
+  .stage-row .lbl { width: 44px; font-size: 14px; color: var(--gray); }
+  .ebtn { flex: 1; background: var(--navy2); border-radius: 8px; padding: 10px 0; font-size: 15px; border: 2px solid transparent; }
+  .ebtn.clear { background: var(--gold); color: var(--navy); }
+  .ebtn.fail { background: var(--red); }
+  .ebtn.live { border-color: var(--gray); }
+  .ebtn.sel { border-color: var(--white); box-shadow: 0 0 0 2px var(--white); }
+  .cur-ev { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+  .cur-ev .en { color: var(--gold); margin-right: 8px; }
+  .cur-info { font-size: 14px; color: var(--gray); margin-bottom: 12px; }
+  .cur-info b { color: var(--white); }
+  .big { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .big button { border-radius: 14px; padding: 26px 0; font-size: 26px; font-weight: 900; }
+  .b-clear { background: var(--gold); color: var(--navy); }
+  .b-miss { background: var(--red); }
+  .big button:disabled { opacity: .3; }
+  .sub { display: flex; gap: 8px; margin-top: 10px; }
+  .sub button { flex: 1; background: var(--navy2); border-radius: 10px; padding: 12px 0; font-size: 15px; font-weight: 700; }
+  .sub .next { background: var(--green); }
+  .sub .next.hl { animation: glow 1s infinite; }
+  .pts { grid-template-columns: repeat(6, 1fr); margin-top: 10px; }
+  .pts button { background: var(--navy2); border-radius: 10px; padding: 14px 0; font-size: 22px; }
+  .pts .m0 { background: var(--red); font-size: 16px; font-weight: 800; }
+  .fin-time { font-size: 48px; text-align: center; font-variant-numeric: tabular-nums; }
+  .fin-score { text-align: center; font-size: 18px; color: var(--gray); margin-bottom: 6px; }
+  .fin-score b { color: var(--gold); font-size: 28px; }
+  .toggles { grid-template-columns: repeat(4, 1fr); }
+  .tg { background: var(--navy2); border-radius: 10px; padding: 12px 0; font-size: 14px; font-weight: 700; color: var(--gray); }
+  .tg.on { background: var(--white); color: var(--navy); }
+  .danger { display: flex; gap: 8px; }
+  .danger button { flex: 1; background: transparent; border: 1px solid var(--line); border-radius: 10px; padding: 10px 0; font-size: 13px; color: var(--gray); }
+  .hint { font-size: 12px; color: var(--gray); margin-top: 8px; line-height: 1.6; }
+  @keyframes glow { 50% { box-shadow: 0 0 0 3px rgba(31,157,99,.5); } }
+</style>
+</head>
+<body>
+<header><img src="logo.png" alt="MöSUKE"><h1>配信オーバーレイ 操作パネル</h1><a href="overlay.html?bg=1" target="_blank">オーバーレイを開く ↗</a></header>
+
+<section><h2>表示</h2><div class="grid toggles" id="toggles"></div></section>
+<section><h2><span>挑戦中の選手</span><span id="alive"></span></h2><div class="grid players" id="players"></div></section>
+<section><h2>種目</h2><div id="events"></div></section>
+<section id="op"></section>
+<section>
+  <h2>リセット</h2>
+  <div class="danger"><button id="resetEv">この種目をやり直す</button><button id="resetAll">全データ消去</button></div>
+  <p class="hint">記録はこのブラウザに保存されます。OBSのカスタムドックに control.html、ブラウザソースに overlay.html（1920×1080）を入れると同期します。</p>
+</section>
+
+<script src="common.js"></script>
+<script>
+  let S = loadState();
+  const $ = (id) => document.getElementById(id);
+
+  function commit(fx) {
+    if (fx) S.fx = Object.assign({ t: Date.now() }, fx);
+    saveState(S);
+    render();
+  }
+
+  function rec(no, id) {
+    S.rec[no] = S.rec[no] || {};
+    S.rec[no][id] = S.rec[no][id] || { log: [] };
+    return S.rec[no][id];
+  }
+
+  // 通常種目: クリア／ミス
+  function throwResult(kind) {
+    const no = S.player, ev = evById(S.event);
+    const before = evStatus(S, no, ev.id).status;
+    if (before === "clear" || before === "fail") return;
+    rec(no, ev.id).log.push(kind);
+    const after = evStatus(S, no, ev.id).status;
+    const st = STAGES.find((s) => s.key === ev.stage);
+    let fx = null;
+    if (after === "clear") {
+      fx = stageCleared(S, no, ev.stage)
+        ? { type: "stage", text: `${st.short.toUpperCase()} STAGE CLEAR`, sub: playerByNo(no).name }
+        : { type: "clear", text: "CLEAR!", sub: `${ev.id} ${ev.name}` };
+    } else if (after === "fail") {
+      fx = { type: "fail", text: "FAILED", sub: `${playerByNo(no).name}　${st.short} Stage 敗退` };
+    }
+    commit(fx);
+  }
+
+  function undo() {
+    const no = S.player, ev = evById(S.event);
+    if (ev.final) {
+      const f = finState(S, no);
+      if (f.stop) { f.stop = 0; f.dq = ""; }
+      else if (f.log.length) f.log.pop();
+      else f.start = 0;
+      recalcFinal(f);
+      S.fin[no] = f;
+    } else {
+      const r = rec(no, ev.id);
+      r.log.pop();
+    }
+    commit();
+  }
+
+  function nextEvent() {
+    const i = EVENTS.findIndex((e) => e.id === S.event);
+    if (i < EVENTS.length - 1) S.event = EVENTS[i + 1].id;
+    commit();
+  }
+
+  // Final: タイムアタック50
+  function recalcFinal(f) {
+    let score = 0, streak = 0;
+    for (const p of f.log) {
+      if (p === 0) streak++;
+      else { streak = 0; score += p; if (score > FINAL_GOAL) score = 25; }
+    }
+    f.score = score; f.streak = streak;
+  }
+
+  function finAct(act, val) {
+    const no = S.player, f = finState(S, no);
+    let fx = null;
+    if (act === "start") { if (f.start) return; f.start = Date.now(); f.stop = 0; f.dq = ""; f.log = []; }
+    if (act === "pt") {
+      if (!f.start || f.stop) return;
+      f.log.push(val);
+      recalcFinal(f);
+      if (f.streak >= 3) { f.dq = "3ミス連続で失格"; f.stop = Date.now(); }
+    }
+    if (act === "goal") {
+      if (!f.start || f.stop) return;
+      f.stop = Date.now();
+      if (f.score !== FINAL_GOAL) f.dq = "50点になっていない";
+    }
+    S.fin[no] = f;
+    const st = finStatus(S, no).status;
+    if (f.stop && st === "clear") fx = { type: "allclear", text: "COMPLETE!", sub: `${playerByNo(no).name}　MöSUKE完全制覇　${fmtTime(finElapsed(f))}` };
+    else if (f.stop && st === "fail") fx = { type: "fail", text: "FAILED", sub: f.dq || "タイムオーバー" };
+    commit(fx);
+  }
+
+  // 1分10秒を過ぎたら自動で失格にする（操作パネル側だけで判定）
+  setInterval(() => {
+    const ev = evById(S.event);
+    if (ev.final) {
+      const f = finState(S, S.player);
+      if (f.start && !f.stop && finElapsed(f) > FINAL_LIMIT_MS) {
+        f.stop = f.start + FINAL_LIMIT_MS; f.dq = "タイムオーバー"; S.fin[S.player] = f;
+        commit({ type: "fail", text: "TIME OVER", sub: playerByNo(S.player).name });
+      }
+      const t = $("finT");
+      if (t) t.textContent = fmtTime(finElapsed(f));
+    }
+  }, 50);
+
+  function render() {
+    $("toggles").innerHTML = [["hud", "種目HUD"], ["player", "選手"], ["progress", "進行"], ["board", "全体"]]
+      .map(([k, l]) => `<button class="tg ${S.show[k] ? "on" : ""}" data-tg="${k}">${l}</button>`).join("");
+
+    $("players").innerHTML = PLAYERS.map((p) => {
+      const pg = playerProgress(S, p.no);
+      return `<button class="pbtn ${p.no === S.player ? "sel" : ""} ${pg.out ? "out" : ""}" data-p="${p.no}">
+        <b class="en">${String(p.no).padStart(2, "0")}</b><span>${p.name}</span></button>`;
+    }).join("");
+    $("alive").textContent = `残り ${PLAYERS.filter((p) => !playerProgress(S, p.no).out).length} 人`;
+
+    $("events").innerHTML = STAGES.map((st) => `<div class="stage-row"><span class="lbl en">${st.short}</span>${
+      EVENTS.filter((e) => e.stage === st.key).map((e) => {
+        const s = evStatus(S, S.player, e.id).status;
+        return `<button class="ebtn en ${s} ${e.id === S.event ? "sel" : ""}" data-e="${e.id}">${e.final ? "タイムアタック50" : e.id}</button>`;
+      }).join("")}</div>`).join("");
+
+    const ev = evById(S.event), no = S.player;
+    const head = `<div class="cur-ev"><span class="en">${ev.id}</span>${ev.name}</div>`;
+    if (ev.final) {
+      const f = finState(S, no), st = finStatus(S, no).status;
+      $("op").innerHTML = head + `
+        <div class="fin-time en" id="finT">${fmtTime(finElapsed(f))}</div>
+        <div class="fin-score"><b class="en">${f.score}</b> / 50点　連続ミス ${f.streak}/3 ${f.dq ? "　<b style='color:var(--red);font-size:16px'>" + f.dq + "</b>" : st === "clear" ? "　<b>成功！</b>" : ""}</div>
+        <div class="big"><button class="b-clear" data-f="start" ${f.start ? "disabled" : ""}>スタート</button>
+          <button class="b-miss" data-f="goal" ${!f.start || f.stop ? "disabled" : ""}>赤ボタン<br><small style="font-size:14px">(ゴール)</small></button></div>
+        <div class="grid pts">${[1,2,3,4,5,6,7,8,9,10,11,12].map((n) => `<button class="en" data-pt="${n}">${n}</button>`).join("")}</div>
+        <div class="grid pts" style="grid-template-columns:1fr"><button class="m0" data-pt="0">ミス（0点）</button></div>
+        <div class="sub"><button id="undo">↶ 1つ戻す</button></div>
+        <p class="hint">50点を超えたら25点に戻る／3ミス連続・1分10秒超えは自動で失格。</p>`;
+    } else {
+      const { clears, misses, status } = evStatus(S, no, ev.id);
+      const done = status === "clear" || status === "fail";
+      $("op").innerHTML = head + `
+        <div class="cur-info">クリア <b>${clears}/${ev.steps.length}</b>（${ev.steps.join(" → ")}）　ミス <b>${misses}/${ev.miss}</b>まで</div>
+        <div class="big"><button class="b-clear" id="bc" ${done ? "disabled" : ""}>✓ クリア</button><button class="b-miss" id="bm" ${done ? "disabled" : ""}>✕ ミス</button></div>
+        <div class="sub"><button id="undo">↶ 1つ戻す</button><button class="next ${status === "clear" ? "hl" : ""}" id="next">次の種目へ →</button></div>`;
+    }
+  }
+
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest("button");
+    if (!t) return;
+    if (t.dataset.tg) { S.show[t.dataset.tg] = !S.show[t.dataset.tg]; return commit(); }
+    if (t.dataset.p) { S.player = +t.dataset.p; S.event = firstOpenEvent(S.player); return commit(); }
+    if (t.dataset.e) { S.event = t.dataset.e; return commit(); }
+    if (t.dataset.f) return finAct(t.dataset.f);
+    if (t.dataset.pt) return finAct("pt", +t.dataset.pt);
+    if (t.id === "bc") return throwResult("c");
+    if (t.id === "bm") return throwResult("m");
+    if (t.id === "undo") return undo();
+    if (t.id === "next") return nextEvent();
+    if (t.id === "resetEv") {
+      if (!confirm(`${playerByNo(S.player).name} の ${S.event} をやり直しますか？`)) return;
+      if (evById(S.event).final) delete S.fin[S.player]; else if (S.rec[S.player]) delete S.rec[S.player][S.event];
+      return commit();
+    }
+    if (t.id === "resetAll") {
+      if (!confirm("全選手の記録を消去します。よろしいですか？")) return;
+      const show = S.show; S = blankState(); S.show = show; return commit();
+    }
+  });
+
+  // 選手を切り替えたら、まだ終わっていない最初の種目を開く
+  function firstOpenEvent(no) {
+    for (const e of EVENTS) {
+      const s = evStatus(S, no, e.id).status;
+      if (s === "fail") return e.id;
+      if (s !== "clear") return e.id;
+    }
+    return "F";
+  }
+
+  onState((s) => { S = s; render(); });
+  render();
+</script>
+</body>
+</html>
