@@ -12,10 +12,10 @@ const STAGES = [
 
 // steps = クリアしていく順番のラベル（数＝必要クリア数）、miss = 許されるミス数
 let EVENTS = [
-  { id: "1-1", stage: "1", name: "ステップバイステップ", kind: "順手", steps: ["4m", "6m", "8m"], miss: 2 },
-  { id: "1-2", stage: "1", name: "ウッドボーン", kind: "縦", steps: ["3.5m", "4m", "4.5m"], miss: 2 },
-  { id: "1-3", stage: "1", name: "スローアンドジェントル", kind: "手前取り", steps: ["4m", "4.5m", "5m"], miss: 2 },
-  { id: "1-4", stage: "1", name: "パワークラッシュ", kind: "飛ばし", steps: ["4→8m", "5→9m", "6→10m"], miss: 2 },
+  { id: "1-1", stage: "1", name: "ステップバイステップ", kind: "順手", steps: ["4m", "6m", "8m"], miss: 3 },
+  { id: "1-2", stage: "1", name: "ウッドボーン", kind: "縦", steps: ["3.5m", "4m", "4.5m"], miss: 3 },
+  { id: "1-3", stage: "1", name: "スローアンドジェントル", kind: "手前取り", steps: ["4m", "4.5m", "5m"], miss: 3 },
+  { id: "1-4", stage: "1", name: "パワークラッシュ", kind: "飛ばし", steps: ["4→8m", "5→9m", "6→10m"], miss: 3 },
   { id: "1-5", stage: "1", name: "そりたつモル棒", kind: "ふわり", steps: ["1回"], miss: 1 },
   { id: "2-1", stage: "2", name: "ヘルトライアングル", kind: "縦ふわり系", steps: ["1回"], miss: 2 },
   { id: "2-2", stage: "2", name: "ナッシングハップン", kind: "その場取り", steps: ["1回"], miss: 2 },
