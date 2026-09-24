@@ -177,7 +177,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="common.js?v=12"></script>
+<script src="common.js?v=13"></script>
 <script>
   const PARAMS = new URLSearchParams(location.search);
   if (PARAMS.get("bg")) document.body.classList.add("bg");
@@ -193,7 +193,7 @@
 
   // ── 効果音（sfx/ のwavを差し替えれば音を変えられる） ──────────
   const SOUNDS = {};
-  for (const n of ["throw_clear", "throw_miss", "clear", "miss", "stage", "complete", "over", "lastchance", "start", "tick", "tick_last"]) {
+  for (const n of ["throw_clear", "throw_miss", "start", "tick", "tick_last"]) {
     const a = new Audio(`sfx/${n}.mp3`); // mp3が無ければwavに切り替える
     a.preload = "auto";
     a.addEventListener("error", () => { if (!a.dataset.fallback) { a.dataset.fallback = "1"; a.src = `sfx/${n}.wav`; } });
@@ -295,7 +295,7 @@
     if (!S.fx || S.fx.t === lastFx) return;
     lastFx = S.fx.t;
     if (Date.now() - S.fx.t > 4000) return; // 読み込み直後に古い演出を再生しない
-    playSfx(S.fx.sfx || { clear: "clear", fail: "miss", stage: "stage", allclear: "complete", last: "lastchance" }[S.fx.type] || "clear", 260);
+    if (S.fx.sfx) playSfx(S.fx.sfx, 260); // 演出そのものには音を付けない（1投ごとのクリア/ミスだけ鳴らす）
     const el = $("fx");
     el.className = "layer " + ({ clear: "", fail: "fail", stage: "big", allclear: "big", last: "last" }[S.fx.type] || "");
     el.querySelector(".fx-main").textContent = S.fx.text;

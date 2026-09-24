@@ -132,13 +132,12 @@
 
   <section>
     <h2>効果音（オーバーレイから鳴る）</h2>
+    <p class="hint" style="margin:0 0 8px">鳴るのは<b>1投クリア／1投ミス</b>と、FINALの開始音・残り10秒のカウントだけ。カットイン（CLEAR!・LAST CHANCE等）は音なし。</p>
     <div class="seg" id="cfgSfx"><button data-sfx="on">鳴らす</button><button data-sfx="off">消す</button></div>
     <div class="frow" style="margin-top:10px"><label>音量 <span id="volLabel"></span></label><input type="range" id="cfgVol" min="0" max="100" step="5"></div>
     <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:6px">
-      <button class="tg" data-try="clear">クリア</button><button class="tg" data-try="miss">ミス</button>
-      <button class="tg" data-try="stage">ステージ</button><button class="tg" data-try="complete">完全制覇</button>
       <button class="tg" data-try="throw_clear">1投クリア</button><button class="tg" data-try="throw_miss">1投ミス</button>
-      <button class="tg" data-try="lastchance">ラストチャンス</button><button class="tg" data-try="over">TIME UP</button></div>
+      <button class="tg" data-try="start">FINAL開始</button><button class="tg" data-try="tick">カウント</button></div>
     <p class="hint">OBSではブラウザソースの音がそのまま配信に乗る（プロパティの「OBS経由で音声を制御する」を入れると音量調整できる）。音を差し替えるときは sfx/ のwavを同じ名前で置き換える。</p>
   </section>
 
@@ -170,7 +169,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="common.js?v=12"></script>
+<script src="common.js?v=13"></script>
 <script>
   let S = loadState();
   const $ = (id) => document.getElementById(id);
@@ -258,7 +257,7 @@
     S.fin[no] = f;
     const st = finStatus(S, no).status;
     if (f.stop && st === "clear") fx = { type: "allclear", text: "COMPLETE!", sub: `${playerByNo(no).name}　MöSUKE完全制覇　${fmtTime(finElapsed(f))}` };
-    else if (f.stop && st === "fail") fx = { type: "fail", text: "FAILED", sub: f.dq || "タイムオーバー", sfx: "over" };
+    else if (f.stop && st === "fail") fx = { type: "fail", text: "FAILED", sub: f.dq || "タイムオーバー" };
     commit(fx);
   }
 
@@ -269,7 +268,7 @@
       const f = finState(S, S.player);
       if (f.start && !f.stop && finElapsed(f) > FINAL_LIMIT_MS) {
         f.stop = f.start + FINAL_LIMIT_MS; f.dq = "タイムオーバー"; S.fin[S.player] = f;
-        commit({ type: "fail", text: "TIME OVER", sub: playerByNo(S.player).name, sfx: "over" });
+        commit({ type: "fail", text: "TIME OVER", sub: playerByNo(S.player).name });
       }
       const t = $("finT");
       if (t) t.textContent = fmtTime(finElapsed(f));

@@ -26,14 +26,10 @@ MöSUKE（全14種目・ステージ突破方式）のライブ配信用オー�
 | --- | --- |
 | throw_clear | 1投クリア（毎投） |
 | throw_miss | 1投ミス（毎投） |
-| clear | 種目クリア |
-| stage | ステージ突破 |
-| complete | 完全制覇 |
-| miss | 敗退 |
-| over | FINALの失格・タイムオーバー |
-| lastchance | ラストチャンス突入 |
 | start | FINALスタート |
 | tick / tick_last | 残り10秒のカウント |
+
+カットイン（CLEAR!・STAGE CLEAR・FAILED・COMPLETE!・LAST CHANCE）には音を付けていない。
 
 効果音は[効果音ラボ](https://soundeffect-lab.info/)（mp3）。`*.wav` は `make_sfx.py` で合成した予備。ローカルで動かすときは `start_local.command`。
 
