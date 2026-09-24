@@ -33,7 +33,7 @@ let FINAL_LIMIT_MS = 70 * 1000;
 let FINAL_GOAL = 50;
 let FINAL_BURST = 25;   // 目標を超えたら戻る点数
 let FINAL_MISS_DQ = 3;  // この回数連続ミスで失格
-let LAYOUT = { hud: "br" }; // 種目HUDの位置: br=右下 / tl=左上
+let LAYOUT = { hud: "br", hudX: 40, hudY: 40 }; // 種目HUDの位置と、画面の端からの余白（px・1920x1080基準）
 let SFX = { on: true, vol: 0.8, where: "overlay" }; // 効果音を鳴らす端末
 const sfxHere = (kind) => SFX.on && (SFX.where === "both" || SFX.where === kind);
 
@@ -63,7 +63,7 @@ function defaultConfig() {
     events: Object.fromEntries(DEFAULT_EVENTS.filter((e) => !e.final).map((e) => [e.id, { name: e.name, steps: e.steps, miss: e.miss }])),
     final: { limitSec: 70, goal: 50, burst: 25, missDq: 3 },
     sfx: { on: true, vol: 0.8, where: "overlay" }, // where: overlay / control / both / none
-    layout: { hud: "br" },
+    layout: { hud: "br", hudX: 40, hudY: 40 },
   };
 }
 

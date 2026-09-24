@@ -103,7 +103,11 @@
 
 <div id="pageCfg" hidden>
   <section><h2>種目表示の位置</h2><div class="seg" id="cfgHud">
-    <button data-hud="br">右下</button><button data-hud="tl">左上</button></div></section>
+    <button data-hud="br">右下</button><button data-hud="tl">左上</button></div>
+    <div class="frow" style="margin-top:10px"><label>横の余白（px）</label><input type="number" id="cfgHudX" step="5"></div>
+    <div class="frow"><label>縦の余白（px）</label><input type="number" id="cfgHudY" step="5"></div>
+    <p class="hint">1920×1080基準の余白。配信アプリのロゴ（PRISM Liveなど）に重ねて隠したいときは<b>0</b>にする。マイナスにすると画面の外へはみ出す。</p>
+  </section>
 
   <section>
     <h2><span>選手</span><span id="cfgCount"></span></h2>
@@ -173,7 +177,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="common.js?v=15"></script>
+<script src="common.js?v=16"></script>
 <script>
   let S = loadState();
   const $ = (id) => document.getElementById(id);
@@ -405,6 +409,8 @@
         <div class="two"><div><small>段階</small><input class="e-steps" value="${esc(c.steps.join(","))}"></div>
           <div><small>ミス可</small><input type="number" class="e-miss" value="${c.miss}" min="0"></div></div></div>`;
     }).join("");
+    $("cfgHudX").value = C.layout.hudX ?? 40;
+    $("cfgHudY").value = C.layout.hudY ?? 40;
     $("cfgLimit").value = C.final.limitSec; $("cfgGoal").value = C.final.goal;
     $("cfgBurst").value = C.final.burst; $("cfgMissDq").value = C.final.missDq;
   }
@@ -423,6 +429,8 @@
         miss: parseInt(r.querySelector(".e-miss").value, 10),
       };
     });
+    C.layout.hudX = +$("cfgHudX").value;
+    C.layout.hudY = +$("cfgHudY").value;
     C.sfx = { on: C.sfx.on, vol: +$("cfgVol").value / 100, where: C.sfx.where || "overlay" };
     C.final = { limitSec: +$("cfgLimit").value, goal: +$("cfgGoal").value, burst: +$("cfgBurst").value, missDq: +$("cfgMissDq").value };
   }
