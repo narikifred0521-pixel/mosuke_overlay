@@ -143,8 +143,17 @@
   <section>
     <h2><span>スマホ同期（Firebase）</span><span id="fbStat"></span></h2>
     <div class="frow" style="grid-template-columns:1fr 1fr"><input id="roomIn" placeholder="ルーム名（例: mosuke2026）"><button class="tg on" id="roomSave">この名前で同期</button></div>
-    <p class="hint">スマホとOBSで<b>同じルーム名</b>にすると、別の端末同士でも同期する。空にして保存すると同期オフ。<br>
+    <p class="hint">スマホとOBSで<b>同じルーム名</b>にすると、別の端末同士でも同期する（ルーム名は端末ごとに入れる）。空にして保存すると同期オフ。<br>
       OBSのブラウザソースURL: <span id="obsUrl" style="color:var(--white);word-break:break-all"></span></p>
+    <div id="fbHelp" hidden style="border:1px solid var(--red);border-radius:10px;padding:10px;margin-top:8px">
+      <p class="hint" style="margin:0">⚠ <b style="color:var(--red)">Firebaseのルールが未設定なので同期できません。</b><br>
+        Firebaseコンソール → morumasa-score-4818b → Realtime Database → ルール を開いて、<code>"rules": {</code> の直後に次を貼って「公開」。</p>
+      <pre style="font-size:12px;background:var(--navy);padding:8px;border-radius:8px;overflow:auto">"mosuke_overlay": {
+  ".read": true,
+  ".write": true
+},</pre>
+      <p class="hint" style="margin:0">貼ったあと、この画面とオーバーレイを再読み込みすると「接続OK」になります。</p>
+    </div>
   </section>
 
   <section>
@@ -158,7 +167,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="common.js?v=6"></script>
+<script src="common.js?v=7"></script>
 <script>
   let S = loadState();
   const $ = (id) => document.getElementById(id);
@@ -344,6 +353,7 @@
     $("fbStat").textContent = fbStatus;
     $("fbStat").style.color = fbStatus === "接続OK" ? "var(--gold)" : fbStatus === "オフ" ? "var(--gray)" : "var(--red)";
     $("obsUrl").textContent = new URL("overlay.html" + (ROOM ? "?room=" + ROOM : ""), location.href).href;
+    $("fbHelp").hidden = !fbStatus.includes("不可");
   }
   fbStatusCbs.push(() => { if (!$("pageCfg").hidden) renderSync(); });
 
@@ -488,6 +498,10 @@
 
   if (ROOM) {
     $("roomTag").textContent = "● " + ROOM;
+    fbStatusCbs.push((t) => {
+      $("roomTag").textContent = (t === "接続OK" ? "● " : "⚠ ") + ROOM + (t === "接続OK" ? "" : "（未接続）");
+      $("roomTag").style.color = t === "接続OK" ? "var(--gold)" : "var(--red)";
+    });
     document.querySelector("header a").href = "overlay.html?bg=1&room=" + ROOM;
   }
   onState((s) => { S = s; render(); });
