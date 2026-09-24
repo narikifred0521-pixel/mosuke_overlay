@@ -126,6 +126,23 @@ def insert_into_clip(clip, events, ids, seen, snap):
     return n
 
 
+def read_csv_events(path):
+    """CSV（1列目=秒、2列目=クリア/ミス）を読む。押し忘れは行を足す、余計なら行を消す。"""
+    out = []
+    with open(path, encoding="utf-8-sig") as f:
+        for row in csv.reader(f):
+            if not row or not row[0].strip():
+                continue
+            try:
+                t = float(row[0])
+            except ValueError:
+                continue  # 見出し行
+            kind = "miss" if len(row) > 1 and "ミス" in row[1] else "clear"
+            out.append((t, kind))
+    out.sort()
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("fcpxml", help="入力FCPXML（.fcpxmld のフォルダでもよい）")
@@ -133,6 +150,8 @@ def main():
     ap.add_argument("--out", help="出力FCPXML（省略時は「元の名前_SE.fcpxml」）")
     ap.add_argument("--csv", help="検出結果をCSVに書き出す")
     ap.add_argument("--dry-run", action="store_true", help="検出結果だけ表示して終わる")
+    ap.add_argument("--from-csv", help="映像を解析せず、このCSV（秒,判定）の通りに効果音を入れる。押し忘れの修正用")
+    ap.add_argument("--offset", type=float, default=0.0, help="全部の効果音を前後にずらす秒数（例: -0.2）")
     a = ap.parse_args()
 
     src = Path(a.fcpxml).expanduser()
@@ -166,12 +185,18 @@ def main():
     if not video or not video.exists():
         sys.exit(f"動画ファイルが見つかりません: {video}\n--video で場所を指定して。")
 
-    w, h, dur = probe(video)
-    print(f"動画: {video.name}  {w}x{h}  {dur:.1f}秒")
-    crop = find_hud(video, dur, w, h)
-    if not crop:
-        sys.exit("種目表示（紺のパネル）が見つからなかった。オーバーレイが映っている動画か確認して。")
-    events, _, _ = detect(video, crop, w, h)
+    if a.from_csv:
+        events = read_csv_events(Path(a.from_csv).expanduser())
+        print(f"CSVから読み込み: {a.from_csv}")
+    else:
+        w, h, dur = probe(video)
+        print(f"動画: {video.name}  {w}x{h}  {dur:.1f}秒")
+        crop = find_hud(video, dur, w, h)
+        if not crop:
+            sys.exit("種目表示（紺のパネル）が見つからなかった。オーバーレイが映っている動画か確認して。")
+        events, _, _ = detect(video, crop, w, h)
+    if a.offset:
+        events = [(max(0.0, t + a.offset), k) for t, k in events]
     print(f"検出: {len(events)}件（クリア{sum(1 for _, k in events if k == 'clear')} / "
           f"ミス{sum(1 for _, k in events if k == 'miss')}）")
     for t, k in events:

@@ -187,6 +187,8 @@ def main():
     ap.add_argument("--out", help="書き出す動画（省略時は「元の名前_SE付き.mp4」）")
     ap.add_argument("--gain", type=float, default=0.9, help="効果音の音量（0〜1くらい）")
     ap.add_argument("--dry-run", action="store_true", help="検出結果だけ表示して終わる")
+    ap.add_argument("--from-csv", help="映像を解析せず、このCSV（秒,判定）の通りに効果音を入れる")
+    ap.add_argument("--offset", type=float, default=0.0, help="全部の効果音を前後にずらす秒数")
     ap.add_argument("--csv", help="検出結果をCSVに書き出す")
     a = ap.parse_args()
 
@@ -194,12 +196,25 @@ def main():
     w, h, dur = probe(src)
     print(f"動画: {src.name}  {w}x{h}  {dur:.1f}秒")
 
-    crop = find_hud(src, dur, w, h)
+    crop = find_hud(src, dur, w, h) if not a.from_csv else (0, 0, w, h)
     if not crop:
         sys.exit("種目表示（紺のパネル）が見つからなかった。オーバーレイが映っている動画か確認して。")
     print(f"種目表示の位置: x={crop[0]} y={crop[1]} w={crop[2]} h={crop[3]}")
 
-    events, gold, red = detect(src, crop, w, h)
+    if a.from_csv:
+        import csv as _csv
+        events = []
+        with open(a.from_csv, encoding="utf-8-sig") as f:
+            for row in _csv.reader(f):
+                try:
+                    events.append((float(row[0]), "miss" if len(row) > 1 and "ミス" in row[1] else "clear"))
+                except (ValueError, IndexError):
+                    pass
+        events.sort()
+    else:
+        events, gold, red = detect(src, crop, w, h)
+    if a.offset:
+        events = [(max(0.0, t + a.offset), k) for t, k in events]
     print(f"検出: {len(events)}件")
     for t, k in events:
         print(f"  {t:7.2f}秒  {'クリア' if k == 'clear' else 'ミス'}")
