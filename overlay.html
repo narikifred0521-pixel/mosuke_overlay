@@ -236,6 +236,13 @@
   }
 
   let S = loadState();
+  // テスト用: ?demo=cmc のように書くと、その投擲結果を表示した状態で開く（検出スクリプトの確認に使う）
+  const DEMO = PARAMS.get("demo");
+  if (DEMO !== null) {
+    S = blankState();
+    S.player = 1; S.event = "1-1";
+    S.rec = { 1: { "1-1": { log: DEMO.split("") } } };
+  }
   let prev = null; // 前回描画時の状態（ポップ演出の差分用）
   let lastFx = S.fx ? S.fx.t : 0;
   const $ = (id) => document.getElementById(id);

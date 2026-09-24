@@ -58,6 +58,25 @@ OBSではブラウザソースの音がそのまま配信に乗る（プロパ�
 | `&bg=1` | 市松模様の背景つきプレビュー（**配信では付けない**） |
 | `&mute=1` | 効果音を消す |
 
+## 動画に効果音を後から入れる（スマホ配信用）
+
+スマホ配信アプリはWebページの音を配信に混ぜられない（マイク越しにしか入らない）。
+そこで、**録画に映っているオーバーレイの表示から1投ごとの判定を読み取って**、効果音を後入れする。
+
+```bash
+# Final Cut用: FCPXMLを渡すと、レーン-1に効果音を並べたFCPXMLを書き出す
+python3 fcpxml_sfx.py 入力.fcpxml
+python3 fcpxml_sfx.py 入力.fcpxmld --dry-run      # 検出結果だけ見る
+python3 fcpxml_sfx.py 入力.fcpxml --video 別の動画.mov --csv 結果.csv
+
+# 動画に直接混ぜたいとき
+python3 video_sfx.py 録画.mov
+```
+
+- 判定の根拠は「クリアの黄色いマス」「ミスの赤い丸」が増えた瞬間。演出の帯は面積で除外している
+- 検出の分解能は0.1秒。FCPXML側はシーケンスのフレーム間隔に丸める
+- 必要: ffmpeg / ffprobe / numpy
+
 ## 同期
 
 - 同じPC内（OBSのカスタムドック＋ブラウザソース）: BroadcastChannel + localStorage。設定不要
