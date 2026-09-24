@@ -131,6 +131,16 @@
   </section>
 
   <section>
+    <h2>効果音（オーバーレイから鳴る）</h2>
+    <div class="seg" id="cfgSfx"><button data-sfx="on">鳴らす</button><button data-sfx="off">消す</button></div>
+    <div class="frow" style="margin-top:10px"><label>音量 <span id="volLabel"></span></label><input type="range" id="cfgVol" min="0" max="100" step="5"></div>
+    <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:6px">
+      <button class="tg" data-try="clear">クリア</button><button class="tg" data-try="miss">ミス</button>
+      <button class="tg" data-try="stage">ステージ</button><button class="tg" data-try="complete">完全制覇</button></div>
+    <p class="hint">OBSではブラウザソースの音がそのまま配信に乗る（プロパティの「OBS経由で音声を制御する」を入れると音量調整できる）。音を差し替えるときは sfx/ のwavを同じ名前で置き換える。</p>
+  </section>
+
+  <section>
     <h2><span>スマホ同期（Firebase）</span><span id="fbStat"></span></h2>
     <div class="frow" style="grid-template-columns:1fr 1fr"><input id="roomIn" placeholder="ルーム名（例: mosuke2026）"><button class="tg on" id="roomSave">この名前で同期</button></div>
     <p class="hint">スマホとOBSで<b>同じルーム名</b>にすると、別の端末同士でも同期する。空にして保存すると同期オフ。<br>
@@ -148,7 +158,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="common.js?v=5"></script>
+<script src="common.js?v=6"></script>
 <script>
   let S = loadState();
   const $ = (id) => document.getElementById(id);
@@ -234,7 +244,7 @@
     S.fin[no] = f;
     const st = finStatus(S, no).status;
     if (f.stop && st === "clear") fx = { type: "allclear", text: "COMPLETE!", sub: `${playerByNo(no).name}　MöSUKE完全制覇　${fmtTime(finElapsed(f))}` };
-    else if (f.stop && st === "fail") fx = { type: "fail", text: "FAILED", sub: f.dq || "タイムオーバー" };
+    else if (f.stop && st === "fail") fx = { type: "fail", text: "FAILED", sub: f.dq || "タイムオーバー", sfx: "over" };
     commit(fx);
   }
 
@@ -245,7 +255,7 @@
       const f = finState(S, S.player);
       if (f.start && !f.stop && finElapsed(f) > FINAL_LIMIT_MS) {
         f.stop = f.start + FINAL_LIMIT_MS; f.dq = "タイムオーバー"; S.fin[S.player] = f;
-        commit({ type: "fail", text: "TIME OVER", sub: playerByNo(S.player).name });
+        commit({ type: "fail", text: "TIME OVER", sub: playerByNo(S.player).name, sfx: "over" });
       }
       const t = $("finT");
       if (t) t.textContent = fmtTime(finElapsed(f));
@@ -339,6 +349,9 @@
 
   function renderCfg() {
     renderSync();
+    document.querySelectorAll("#cfgSfx button").forEach((b) => b.classList.toggle("on", (b.dataset.sfx === "on") === !!C.sfx.on));
+    $("cfgVol").value = Math.round(C.sfx.vol * 100);
+    $("volLabel").textContent = Math.round(C.sfx.vol * 100) + "%";
     document.querySelectorAll("#cfgHud button").forEach((b) => b.classList.toggle("on", b.dataset.hud === C.layout.hud));
     $("cfgCount").textContent = `${C.players.length} 人`;
     $("cfgPlayers").innerHTML = C.players.map((p, i) => `<div class="prow" data-i="${i}">
@@ -369,6 +382,7 @@
         miss: parseInt(r.querySelector(".e-miss").value, 10),
       };
     });
+    C.sfx = { on: C.sfx.on, vol: +$("cfgVol").value / 100 };
     C.final = { limitSec: +$("cfgLimit").value, goal: +$("cfgGoal").value, burst: +$("cfgBurst").value, missDq: +$("cfgMissDq").value };
   }
 
@@ -418,6 +432,12 @@
       if (t.dataset.tab === "cfg") { C = loadConfig(); renderCfg(); }
       return;
     }
+    if (t.dataset.sfx) { readCfg(); C.sfx.on = t.dataset.sfx === "on"; return renderCfg(); }
+    if (t.dataset.try) {
+      const a = new Audio(`sfx/${t.dataset.try === "complete" ? "complete" : t.dataset.try}.wav`);
+      a.volume = +$("cfgVol").value / 100; a.play().catch(() => cfgMsg("⚠ 音を鳴らせませんでした"));
+      return;
+    }
     if (t.dataset.hud) { readCfg(); C.layout.hud = t.dataset.hud; return renderCfg(); }
     if (t.dataset.delp) { readCfg(); C.players.splice(+t.dataset.delp, 1); return renderCfg(); }
     if (t.id === "cfgAddP") { readCfg(); C.players.push({ no: Math.max(0, ...C.players.map((p) => p.no || 0)) + 1, name: "", title: "" }); return renderCfg(); }
@@ -447,6 +467,10 @@
       return;
     }
     if (t.id === "cfgImportBtn") return $("cfgImport").click();
+  });
+
+  document.addEventListener("input", (e) => {
+    if (e.target.id === "cfgVol") $("volLabel").textContent = e.target.value + "%";
   });
 
   $("cfgImport").addEventListener("change", async (e) => {

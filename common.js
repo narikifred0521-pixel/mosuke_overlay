@@ -34,6 +34,7 @@ let FINAL_GOAL = 50;
 let FINAL_BURST = 25;   // 目標を超えたら戻る点数
 let FINAL_MISS_DQ = 3;  // この回数連続ミスで失格
 let LAYOUT = { hud: "br" }; // 種目HUDの位置: br=右下 / tl=左上
+let SFX = { on: true, vol: 0.8 };  // 効果音（鳴らすのはオーバーレイ側だけ）
 
 let PLAYERS = [
   { no: 1, name: "渡辺達也", title: "森下一派" },
@@ -60,6 +61,7 @@ function defaultConfig() {
     players: JSON.parse(JSON.stringify(DEFAULT_PLAYERS)),
     events: Object.fromEntries(DEFAULT_EVENTS.filter((e) => !e.final).map((e) => [e.id, { name: e.name, steps: e.steps, miss: e.miss }])),
     final: { limitSec: 70, goal: 50, burst: 25, missDq: 3 },
+    sfx: { on: true, vol: 0.8 },
     layout: { hud: "br" },
   };
 }
@@ -73,6 +75,7 @@ function loadConfig() {
       if (s.events) for (const id in c.events) Object.assign(c.events[id], s.events[id] || {});
       Object.assign(c.final, s.final || {});
       Object.assign(c.layout, s.layout || {});
+      Object.assign(c.sfx, s.sfx || {});
     }
   } catch (e) {}
   return c;
@@ -89,6 +92,7 @@ function applyConfig(c) {
   fe.name = `タイムアタック${FINAL_GOAL}`;
   fe.kind = `${fmtLimit(c.final.limitSec)}以内`;
   LAYOUT = c.layout;
+  SFX = c.sfx;
 }
 
 function fmtLimit(sec) {

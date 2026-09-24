@@ -168,9 +168,25 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="common.js?v=5"></script>
+<script src="common.js?v=6"></script>
 <script>
   if (new URLSearchParams(location.search).get("bg")) document.body.classList.add("bg");
+
+  // ── 効果音（sfx/ のwavを差し替えれば音を変えられる） ──────────
+  const SOUNDS = {};
+  for (const n of ["clear", "miss", "stage", "complete", "over", "start", "tick", "tick_last"]) {
+    const a = new Audio(`sfx/${n}.wav`);
+    a.preload = "auto";
+    SOUNDS[n] = a;
+  }
+  const MUTED = new URLSearchParams(location.search).get("mute");
+
+  function playSfx(name) {
+    if (!SFX.on || MUTED || !SOUNDS[name]) return;
+    const a = SOUNDS[name].cloneNode();
+    a.volume = Math.max(0, Math.min(1, SFX.vol));
+    a.play().catch(() => {}); // ブラウザで最初のクリック前は鳴らない（OBSでは鳴る）
+  }
 
   let S = loadState();
   let prev = null; // 前回描画時の状態（ポップ演出の差分用）
@@ -258,6 +274,7 @@
     if (!S.fx || S.fx.t === lastFx) return;
     lastFx = S.fx.t;
     if (Date.now() - S.fx.t > 4000) return; // 読み込み直後に古い演出を再生しない
+    playSfx(S.fx.sfx || { clear: "clear", fail: "miss", stage: "stage", allclear: "complete" }[S.fx.type] || "clear");
     const el = $("fx");
     el.className = "layer " + ({ clear: "", fail: "fail", stage: "big", allclear: "big" }[S.fx.type] || "");
     el.querySelector(".fx-main").textContent = S.fx.text;
@@ -275,11 +292,15 @@
   }
 
   // Finalのタイマーは毎フレーム更新
+  let lastStart = 0, lastTick = -1;
   function tick() {
     const ev = evById(S.event);
     if (ev.final) {
       const f = finState(S, S.player);
+      if (f.start && f.start !== lastStart) { lastStart = f.start; lastTick = -1; playSfx("start"); }
       if (f.start && !f.stop) {
+        const left = Math.ceil((FINAL_LIMIT_MS - finElapsed(f)) / 1000);
+        if (left !== lastTick && left <= 10 && left >= 1) { lastTick = left; playSfx(left === 1 ? "tick_last" : "tick"); }
         const ms = finElapsed(f), t = $("finTime"), b = $("finBar");
         if (t) {
           t.textContent = fmtTime(ms);
