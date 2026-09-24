@@ -106,7 +106,7 @@
     <button data-hud="br">右下</button><button data-hud="tl">左上</button></div>
     <div class="frow" style="margin-top:10px"><label>横の余白（px）</label><input type="number" id="cfgHudX" step="5"></div>
     <div class="frow"><label>縦の余白（px）</label><input type="number" id="cfgHudY" step="5"></div>
-    <p class="hint">1920×1080基準の余白。初期値は横10・縦20（PRISM Liveのロゴが隠れる位置）。マイナスにすると画面の外へはみ出す。</p>
+    <p class="hint">1920×1080基準の余白。初期値は横10・縦20（PRISM Liveのロゴが隠れる位置）。縦の余白は左下の選手名にも効く。マイナスにすると画面の外へはみ出す。</p>
   </section>
 
   <section>
@@ -177,7 +177,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="common.js?v=17"></script>
+<script src="common.js?v=18"></script>
 <script>
   let S = loadState();
   const $ = (id) => document.getElementById(id);

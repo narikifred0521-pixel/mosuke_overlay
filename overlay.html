@@ -97,7 +97,7 @@
   .stg-sep { width: 2px; height: 46px; background: var(--line); }
 
   /* ── 選手ロワーサード（左下） ── */
-  #player { left: 0; bottom: 60px; width: 900px; height: 170px; }
+  #player { left: 0; bottom: var(--hy, 20px); width: 900px; height: 170px; }
   #player.hide { transform: translateX(-80px); }
   .pl-box { position: absolute; left: 0; top: 0; width: 860px; height: 150px; background: var(--navy);
     clip-path: polygon(0 0, 100% 0, calc(100% - 50px) 100%, 0 100%); display: flex; align-items: center; }
@@ -183,7 +183,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="common.js?v=17"></script>
+<script src="common.js?v=18"></script>
 <script>
   const PARAMS = new URLSearchParams(location.search);
   if (PARAMS.get("bg")) document.body.classList.add("bg");
