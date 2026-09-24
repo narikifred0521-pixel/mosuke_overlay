@@ -34,7 +34,7 @@
     padding: 14px 26px; font: inherit; font-size: 22px; font-weight: 900; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,.4); }
 
   /* ── HUD（右下）: 種目名＋クリア/ミス ── */
-  #hud { right: var(--hx, 40px); bottom: var(--hy, 40px); width: 660px; background: var(--hud); border-radius: 22px;
+  #hud { right: var(--hx, 10px); bottom: var(--hy, 20px); width: 660px; background: var(--hud); border-radius: 22px;
     padding: 22px 32px 26px 36px; box-shadow: 0 10px 30px rgba(0,0,0,.35); overflow: hidden; }
   #hud.hide { transform: translateX(40px); }
   #hud::before { content: ""; position: absolute; left: 0; top: 22px; width: 11px; height: 64px; background: var(--red); }
@@ -63,7 +63,7 @@
   #hud.st-clear { box-shadow: 0 0 0 4px var(--gold), 0 10px 30px rgba(0,0,0,.35); }
   #hud.st-fail { box-shadow: 0 0 0 4px var(--red), 0 10px 30px rgba(0,0,0,.35); }
 
-  body.hud-tl #hud { right: auto; bottom: auto; left: var(--hx, 40px); top: var(--hy, 40px); }
+  body.hud-tl #hud { right: auto; bottom: auto; left: var(--hx, 10px); top: var(--hy, 20px); }
   body.hud-tl #hud.hide { transform: translateX(-40px); }
   /* Final用HUD */
   .fin-wrap { display: flex; align-items: flex-end; gap: 26px; margin-top: 14px; }
@@ -115,7 +115,7 @@
   .pl-status.out { background: var(--red); color: #fff; }
 
   /* ── 全体ボード（右） ── */
-  #board { right: var(--hx, 40px); top: 130px; width: 560px; background: rgba(16,26,51,.95); border-radius: 18px; padding: 20px 22px;
+  #board { right: var(--hx, 10px); top: 130px; width: 560px; background: rgba(16,26,51,.95); border-radius: 18px; padding: 20px 22px;
     box-shadow: 0 10px 30px rgba(0,0,0,.35); }
   #board.hide { transform: translateX(40px); }
   .bd-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
@@ -183,7 +183,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="common.js?v=16"></script>
+<script src="common.js?v=17"></script>
 <script>
   const PARAMS = new URLSearchParams(location.search);
   if (PARAMS.get("bg")) document.body.classList.add("bg");
@@ -385,8 +385,8 @@
   onState((s) => { S = s; render(); });
   onConfig(() => location.reload());
   document.body.classList.add("hud-" + LAYOUT.hud);
-  document.documentElement.style.setProperty("--hx", (LAYOUT.hudX ?? 40) + "px");
-  document.documentElement.style.setProperty("--hy", (LAYOUT.hudY ?? 40) + "px");
+  document.documentElement.style.setProperty("--hx", (LAYOUT.hudX ?? 10) + "px");
+  document.documentElement.style.setProperty("--hy", (LAYOUT.hudY ?? 20) + "px");
   render();
   requestAnimationFrame(tick);
 </script>
