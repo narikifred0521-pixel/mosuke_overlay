@@ -35,7 +35,7 @@ MöSUKE（全14種目・ステージ突破方式）のライブ配信用オー�
 | start | FINALスタート |
 | tick / tick_last | 残り10秒のカウント |
 
-`*.wav` は `make_sfx.py` で合成したもの（配布自由）。効果音ラボのmp3は再配布禁止なのでGitには入れていない。配信PCで使うときは `sfx/` にmp3を置いて `start_local.command` でローカル配信する。
+効果音は[効果音ラボ](https://soundeffect-lab.info/)（mp3）。`*.wav` は `make_sfx.py` で合成した予備。ローカルで動かすときは `start_local.command`。
 
 OBSではブラウザソースの音がそのまま配信に乗る（プロパティの「OBS経由で音声を制御する」で音量調整）。ブラウザで開いたときは、1回クリックするまで鳴らない。`overlay.html?mute=1` で消音。
 
