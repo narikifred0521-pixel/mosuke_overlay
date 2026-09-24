@@ -28,6 +28,12 @@
   .layer { position: absolute; transition: opacity .35s, transform .45s cubic-bezier(.2,.9,.2,1); }
   .layer.hide { opacity: 0; pointer-events: none; }
 
+  /* ?only=hud … 種目表示だけを左上に出すモード（操作パネルの確認用） */
+  body.only-hud #progress, body.only-hud #player, body.only-hud #board, body.only-hud #fx, body.only-hud #unlock { display: none !important; }
+  body.only-hud #stage { left: 0; top: 0; transform: scale(var(--k, 1)); transform-origin: 0 0; }
+  body.only-hud #hud { left: 0; top: 0; right: auto; bottom: auto; box-shadow: none; }
+  body.only-hud #hud.hide { opacity: 1; transform: none; }
+
   /* 音がブロックされたときだけ出るボタン（OBSでは出ない） */
   #unlock { display: none; position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 99;
     align-items: center; gap: 8px; background: var(--gold); color: var(--navy); border: 0; border-radius: 999px;
@@ -183,13 +189,19 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="common.js?v=18"></script>
+<script src="common.js?v=19"></script>
 <script>
   const PARAMS = new URLSearchParams(location.search);
   if (PARAMS.get("bg")) document.body.classList.add("bg");
+  const ONLY_HUD = PARAMS.get("only") === "hud";
+  if (ONLY_HUD) document.body.classList.add("only-hud");
 
   // 画面サイズに合わせる。fit=width なら横幅に合わせる（縦画面で下寄せしたいとき）
   function fitStage() {
+    if (ONLY_HUD) {  // 種目表示（660x248）の幅に合わせる
+      document.documentElement.style.setProperty("--k", innerWidth / 672);
+      return;
+    }
     const kw = innerWidth / 1920, kh = innerHeight / 1080;
     const k = PARAMS.get("fit") === "width" ? kw : Math.min(kw, kh);
     document.documentElement.style.setProperty("--k", k * (+PARAMS.get("zoom") || 1));
