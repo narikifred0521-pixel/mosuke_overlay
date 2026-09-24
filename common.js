@@ -200,7 +200,7 @@ const chan = "BroadcastChannel" in window ? new BroadcastChannel("mosuke_overlay
 let lastStateT = 0;
 
 function saveState(S) {
-  S.t = Date.now();
+  S.t = Math.max(Date.now(), lastStateT + 1); // 連打で同じミリ秒になっても取りこぼさない
   lastStateT = S.t;
   try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {}
   if (chan) chan.postMessage(S);

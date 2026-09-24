@@ -136,7 +136,9 @@
     <div class="frow" style="margin-top:10px"><label>音量 <span id="volLabel"></span></label><input type="range" id="cfgVol" min="0" max="100" step="5"></div>
     <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:6px">
       <button class="tg" data-try="clear">クリア</button><button class="tg" data-try="miss">ミス</button>
-      <button class="tg" data-try="stage">ステージ</button><button class="tg" data-try="complete">完全制覇</button></div>
+      <button class="tg" data-try="stage">ステージ</button><button class="tg" data-try="complete">完全制覇</button>
+      <button class="tg" data-try="throw_clear">1投クリア</button><button class="tg" data-try="throw_miss">1投ミス</button>
+      <button class="tg" data-try="lastchance">ラストチャンス</button><button class="tg" data-try="over">TIME UP</button></div>
     <p class="hint">OBSではブラウザソースの音がそのまま配信に乗る（プロパティの「OBS経由で音声を制御する」を入れると音量調整できる）。音を差し替えるときは sfx/ のwavを同じ名前で置き換える。</p>
   </section>
 
@@ -167,7 +169,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="common.js?v=7"></script>
+<script src="common.js?v=9"></script>
 <script>
   let S = loadState();
   const $ = (id) => document.getElementById(id);
@@ -199,6 +201,8 @@
         : { type: "clear", text: "CLEAR!", sub: `${ev.id} ${ev.name}` };
     } else if (after === "fail") {
       fx = { type: "fail", text: "FAILED", sub: `${playerByNo(no).name}　${st.short} Stage 敗退` };
+    } else if (kind === "m" && evStatus(S, no, ev.id).misses === ev.miss) {
+      fx = { type: "last", text: "LAST CHANCE", sub: "次に外したら敗退" }; // あと1回もミスできない
     }
     commit(fx);
   }
@@ -444,7 +448,8 @@
     }
     if (t.dataset.sfx) { readCfg(); C.sfx.on = t.dataset.sfx === "on"; return renderCfg(); }
     if (t.dataset.try) {
-      const a = new Audio(`sfx/${t.dataset.try === "complete" ? "complete" : t.dataset.try}.wav`);
+      const a = new Audio(`sfx/${t.dataset.try}.mp3`);
+      a.addEventListener("error", () => { a.src = `sfx/${t.dataset.try}.wav`; a.play().catch(() => {}); });
       a.volume = +$("cfgVol").value / 100; a.play().catch(() => cfgMsg("⚠ 音を鳴らせませんでした"));
       return;
     }

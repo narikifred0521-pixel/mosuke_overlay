@@ -142,6 +142,8 @@
   #fx.fail .fx-main, #fx.fail .fx-sub { color: var(--white); }
   #fx.fail .fx-main { color: var(--red); }
   #fx.big .b1 { background: var(--gold); } #fx.big .b2 { background: var(--red); }
+  #fx.last .b1 { background: var(--gold); } #fx.last .b2 { background: var(--navy); }
+  #fx.last .fx-main { color: var(--gold); } #fx.last .fx-sub { color: var(--white); }
   #fx.big .fx-main, #fx.big .fx-sub { color: var(--white); }
   .fx-flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
   #fx.play .fx-flash { animation: flash .5s; }
@@ -168,21 +170,23 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="common.js?v=7"></script>
+<script src="common.js?v=9"></script>
 <script>
   if (new URLSearchParams(location.search).get("bg")) document.body.classList.add("bg");
 
   // ── 効果音（sfx/ のwavを差し替えれば音を変えられる） ──────────
   const SOUNDS = {};
-  for (const n of ["clear", "miss", "stage", "complete", "over", "start", "tick", "tick_last"]) {
-    const a = new Audio(`sfx/${n}.wav`);
+  for (const n of ["throw_clear", "throw_miss", "clear", "miss", "stage", "complete", "over", "lastchance", "start", "tick", "tick_last"]) {
+    const a = new Audio(`sfx/${n}.mp3`); // mp3が無ければwavに切り替える
     a.preload = "auto";
+    a.addEventListener("error", () => { if (!a.dataset.fallback) { a.dataset.fallback = "1"; a.src = `sfx/${n}.wav`; } });
     SOUNDS[n] = a;
   }
   const MUTED = new URLSearchParams(location.search).get("mute");
 
-  function playSfx(name) {
+  function playSfx(name, delay = 0) {
     if (!SFX.on || MUTED || !SOUNDS[name]) return;
+    if (delay) return void setTimeout(() => playSfx(name), delay);
     const a = SOUNDS[name].cloneNode();
     a.volume = Math.max(0, Math.min(1, SFX.vol));
     a.play().catch(() => {}); // ブラウザで最初のクリック前は鳴らない（OBSでは鳴る）
@@ -274,9 +278,9 @@
     if (!S.fx || S.fx.t === lastFx) return;
     lastFx = S.fx.t;
     if (Date.now() - S.fx.t > 4000) return; // 読み込み直後に古い演出を再生しない
-    playSfx(S.fx.sfx || { clear: "clear", fail: "miss", stage: "stage", allclear: "complete" }[S.fx.type] || "clear");
+    playSfx(S.fx.sfx || { clear: "clear", fail: "miss", stage: "stage", allclear: "complete", last: "lastchance" }[S.fx.type] || "clear", 260);
     const el = $("fx");
-    el.className = "layer " + ({ clear: "", fail: "fail", stage: "big", allclear: "big" }[S.fx.type] || "");
+    el.className = "layer " + ({ clear: "", fail: "fail", stage: "big", allclear: "big", last: "last" }[S.fx.type] || "");
     el.querySelector(".fx-main").textContent = S.fx.text;
     el.querySelector(".fx-sub").textContent = S.fx.sub || "";
     void el.offsetWidth;
@@ -285,8 +289,19 @@
     playFx.t = setTimeout(() => el.classList.remove("play"), 2700);
   }
 
+  // 1投ごとの音: 直前の状態と比べて、クリア／ミスが増えていたら鳴らす
+  function playThrowSfx() {
+    if (!prev) return;
+    const ev = evById(S.event);
+    if (ev.final || prev.player !== S.player || prev.event !== S.event) return;
+    const a = evStatus(prev, S.player, ev.id), b = evStatus(S, S.player, ev.id);
+    if (b.clears > a.clears) playSfx("throw_clear");
+    else if (b.misses > a.misses) playSfx("throw_miss");
+  }
+
   function render() {
     if (!playerByNo(S.player)) S.player = PLAYERS[0].no;
+    playThrowSfx();
     renderHud(); renderProgress(); renderPlayer(); renderBoard(); playFx();
     prev = JSON.parse(JSON.stringify(S));
   }

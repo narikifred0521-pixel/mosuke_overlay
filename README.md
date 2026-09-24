@@ -15,22 +15,27 @@ MöSUKE（全14種目・ステージ突破方式）のライブ配信用オー�
 - 進行バー（右上）: 14種目のマス。クリア＝金、失敗＝赤、挑戦中＝点滅
 - 選手ロワーサード（左下）: ゼッケン・名前・肩書き・現在の状況
 - 全体ボード（右）: 12人の到達状況と残り人数
-- 演出: CLEAR! ／ STAGE CLEAR ／ FAILED ／ COMPLETE!（完全制覇）
+- 演出: CLEAR! ／ STAGE CLEAR ／ FAILED ／ COMPLETE!（完全制覇）／ LAST CHANCE（あと1回もミスできない状態になったとき）
 - FINAL: タイムアタック50のタイマー・得点・連続ミス（50点超え→25点、3連続ミス／1分10秒超えで自動失格）
 
 ## 効果音
 
-`sfx/*.wav`（`make_sfx.py` で合成。差し替えは同じ名前のwavを置くだけ）。鳴らすのはオーバーレイ側。
+鳴らすのはオーバーレイ側だけ。**mp3があればmp3、無ければwav**を鳴らす（→ `sfx/README.md`）。
 
 | ファイル | 鳴るとき |
 | --- | --- |
-| clear.wav | 種目クリア |
-| stage.wav | ステージ突破 |
-| complete.wav | 完全制覇 |
-| miss.wav | 敗退 |
-| over.wav | FINALの失格・タイムオーバー |
-| start.wav | FINALスタート |
-| tick.wav / tick_last.wav | 残り10秒のカウント（最後の1秒だけ高い音） |
+| throw_clear | 1投クリア（毎投） |
+| throw_miss | 1投ミス（毎投） |
+| clear | 種目クリア |
+| stage | ステージ突破 |
+| complete | 完全制覇 |
+| miss | 敗退 |
+| over | FINALの失格・タイムオーバー |
+| lastchance | ラストチャンス突入 |
+| start | FINALスタート |
+| tick / tick_last | 残り10秒のカウント |
+
+`*.wav` は `make_sfx.py` で合成したもの（配布自由）。効果音ラボのmp3は再配布禁止なのでGitには入れていない。配信PCで使うときは `sfx/` にmp3を置いて `start_local.command` でローカル配信する。
 
 OBSではブラウザソースの音がそのまま配信に乗る（プロパティの「OBS経由で音声を制御する」で音量調整）。ブラウザで開いたときは、1回クリックするまで鳴らない。`overlay.html?mute=1` で消音。
 
