@@ -21,12 +21,14 @@
 <div class="wrap">
   <div class="stage">
     <h1>MöSUKE 配信オーバーレイ — 右の操作パネルを押すと左の画面が動く（市松模様は透過部分）</h1>
-    <div class="screen" id="screen"><iframe id="ov" src="overlay.html?bg=1"></iframe></div>
+    <div class="screen" id="screen"><iframe id="ov"></iframe></div>
     <p>効果音は、この画面を1回クリックすると鳴るようになる（OBSでは最初から鳴る）。<br>OBS: ブラウザソースに <a href="overlay.html">overlay.html</a>（幅1920・高さ1080）／カスタムドックに <a href="control.html">control.html</a></p>
   </div>
   <iframe class="ctrl" src="control.html"></iframe>
 </div>
 <script>
+  // デモは毎回読み込み直す（古い版がキャッシュされないように）
+  document.getElementById("ov").src = "overlay.html?bg=1&t=" + Date.now();
   const fit = () => { const s = document.getElementById("screen"); document.getElementById("ov").style.transform = `scale(${s.clientWidth / 1920})`; };
   addEventListener("resize", fit); fit();
 </script>
