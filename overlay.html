@@ -14,8 +14,11 @@
     --en: "Barlow", "Hiragino Sans", sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
   body { font-family: var(--jp); color: var(--white); position: relative; }
+  /* 中身は1920×1080で作って、画面サイズに合わせて丸ごと拡大縮小する */
+  #stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px;
+    transform: translate(-50%, -50%) scale(var(--k, 1)); transform-origin: center center; }
   /* ?bg=1 のときだけ、透過が分かるチェック柄を敷く（OBSでは何も出ない） */
   body.bg { background-color: #20242e; background-image:
       linear-gradient(45deg, #171a22 25%, transparent 25%, transparent 75%, #171a22 75%),
@@ -160,6 +163,7 @@
 </style>
 </head>
 <body>
+<div id="stage">
   <div id="hud" class="layer"></div>
   <div id="progress" class="layer"></div>
   <div id="player" class="layer"></div>
@@ -169,12 +173,23 @@
     <div class="fx-band b1"></div><div class="fx-band b2"></div>
     <div class="fx-text"><div class="fx-main en"></div><div class="fx-sub"></div></div>
   </div>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="common.js?v=11"></script>
+<script src="common.js?v=12"></script>
 <script>
-  if (new URLSearchParams(location.search).get("bg")) document.body.classList.add("bg");
+  const PARAMS = new URLSearchParams(location.search);
+  if (PARAMS.get("bg")) document.body.classList.add("bg");
+
+  // 画面サイズに合わせる。fit=width なら横幅に合わせる（縦画面で下寄せしたいとき）
+  function fitStage() {
+    const kw = innerWidth / 1920, kh = innerHeight / 1080;
+    const k = PARAMS.get("fit") === "width" ? kw : Math.min(kw, kh);
+    document.documentElement.style.setProperty("--k", k * (+PARAMS.get("zoom") || 1));
+  }
+  addEventListener("resize", fitStage);
+  fitStage();
 
   // ── 効果音（sfx/ のwavを差し替えれば音を変えられる） ──────────
   const SOUNDS = {};
