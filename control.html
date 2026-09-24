@@ -86,7 +86,7 @@
 </style>
 </head>
 <body>
-<header><img src="logo.png" alt="MöSUKE"><h1>操作パネル <span id="roomTag" style="color:var(--gold)"></span></h1><a href="overlay.html?bg=1" target="_blank">オーバーレイを開く ↗</a></header>
+<header><img src="logo.png" alt="MöSUKE"><h1>操作パネル <span id="roomTag" style="color:var(--gold)"></span></h1><a href="overlay.html?bg=1" target="_blank">プレビュー（市松模様＝透過）↗</a></header>
 
 <nav class="tabs"><button class="tab on" data-tab="op">操作</button><button class="tab" data-tab="cfg">設定</button></nav>
 <div id="pageOp">
@@ -146,7 +146,8 @@
     <h2><span>スマホ同期（Firebase）</span><span id="fbStat"></span></h2>
     <div class="frow" style="grid-template-columns:1fr 1fr"><input id="roomIn" placeholder="ルーム名（例: mosuke2026）"><button class="tg on" id="roomSave">この名前で同期</button></div>
     <p class="hint">スマホとOBSで<b>同じルーム名</b>にすると、別の端末同士でも同期する（ルーム名は端末ごとに入れる）。空にして保存すると同期オフ。<br>
-      OBSのブラウザソースURL: <span id="obsUrl" style="color:var(--white);word-break:break-all"></span></p>
+      <b style="color:var(--gold)">配信で使うURL（これをコピー）</b>: <span id="obsUrl" style="color:var(--white);word-break:break-all"></span><br>
+      ※ URLに <code>bg=1</code> が付いていると市松模様の背景が出て透過しない。配信ではこのURLをそのまま使う。</p>
     <div id="fbHelp" hidden style="border:1px solid var(--red);border-radius:10px;padding:10px;margin-top:8px">
       <p class="hint" style="margin:0">⚠ <b style="color:var(--red)">Firebaseのルールが未設定なので同期できません。</b><br>
         Firebaseコンソール → morumasa-score-4818b → Realtime Database → ルール を開いて、<code>"rules": {</code> の直後に次を貼って「公開」。</p>
@@ -169,7 +170,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="common.js?v=10"></script>
+<script src="common.js?v=11"></script>
 <script>
   let S = loadState();
   const $ = (id) => document.getElementById(id);
