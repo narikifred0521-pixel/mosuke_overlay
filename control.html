@@ -134,6 +134,10 @@
     <h2>効果音（オーバーレイから鳴る）</h2>
     <p class="hint" style="margin:0 0 8px">鳴るのは<b>1投クリア／1投ミス</b>と、FINALの開始音・残り10秒のカウントだけ。カットイン（CLEAR!・LAST CHANCE等）は音なし。</p>
     <div class="seg" id="cfgSfx"><button data-sfx="on">鳴らす</button><button data-sfx="off">消す</button></div>
+    <p class="hint" style="margin:10px 0 4px">鳴らす端末</p>
+    <div class="seg" id="cfgWhere" style="grid-template-columns:repeat(3,1fr)">
+      <button data-where="overlay">配信画面</button><button data-where="control">この操作パネル</button><button data-where="both">両方</button></div>
+    <p class="hint" style="margin:6px 0 0">スマホで配信していて<b>マイクが効果音を拾ってしまう</b>ときは「この操作パネル」を選ぶ（別の端末＝手元のスマホやPCから鳴る）。配信に音を乗せたいなら「配信画面」。</p>
     <div class="frow" style="margin-top:10px"><label>音量 <span id="volLabel"></span></label><input type="range" id="cfgVol" min="0" max="100" step="5"></div>
     <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:6px">
       <button class="tg" data-try="throw_clear">1投クリア</button><button class="tg" data-try="throw_miss">1投ミス</button>
@@ -169,10 +173,26 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="common.js?v=14"></script>
+<script src="common.js?v=15"></script>
 <script>
   let S = loadState();
   const $ = (id) => document.getElementById(id);
+
+  // ── 効果音（「鳴らす端末」で操作パネルが選ばれているときだけ鳴る） ──
+  const SOUNDS = {};
+  for (const n of ["throw_clear", "throw_miss", "start", "tick", "tick_last"]) {
+    const a = new Audio(`sfx/${n}.mp3`);
+    a.preload = "auto";
+    a.addEventListener("error", () => { if (!a.dataset.fallback) { a.dataset.fallback = "1"; a.src = `sfx/${n}.wav`; } });
+    SOUNDS[n] = a;
+  }
+
+  function playSfx(name) {
+    if (!sfxHere("control") || !SOUNDS[name]) return;
+    const a = SOUNDS[name].cloneNode();
+    a.volume = Math.max(0, Math.min(1, SFX.vol));
+    a.play().catch(() => {});
+  }
 
   function commit(fx) {
     if (fx) S.fx = Object.assign({ t: Date.now() }, fx);
@@ -192,6 +212,7 @@
     const before = evStatus(S, no, ev.id).status;
     if (before === "clear" || before === "fail") return;
     rec(no, ev.id).log.push(kind);
+    playSfx(kind === "c" ? "throw_clear" : "throw_miss");
     const after = evStatus(S, no, ev.id).status;
     const st = STAGES.find((s) => s.key === ev.stage);
     let fx = null;
@@ -242,7 +263,7 @@
   function finAct(act, val) {
     const no = S.player, f = finState(S, no);
     let fx = null;
-    if (act === "start") { if (f.start) return; f.start = Date.now(); f.stop = 0; f.dq = ""; f.log = []; }
+    if (act === "start") { if (f.start) return; f.start = Date.now(); f.stop = 0; f.dq = ""; f.log = []; playSfx("start"); }
     if (act === "pt") {
       if (!f.start || f.stop) return;
       f.log.push(val);
@@ -261,6 +282,7 @@
     commit(fx);
   }
 
+  let tickLeft = -1;
   // 制限時間を過ぎたら自動で失格にする（操作パネル側だけで判定）
   setInterval(() => {
     const ev = evById(S.event);
@@ -272,6 +294,10 @@
       }
       const t = $("finT");
       if (t) t.textContent = fmtTime(finElapsed(f));
+      if (f.start && !f.stop) {
+        const left = Math.ceil((FINAL_LIMIT_MS - finElapsed(f)) / 1000);
+        if (left !== tickLeft && left <= 10 && left >= 1) { tickLeft = left; playSfx(left === 1 ? "tick_last" : "tick"); }
+      }
     }
   }, 50);
 
@@ -364,6 +390,7 @@
   function renderCfg() {
     renderSync();
     document.querySelectorAll("#cfgSfx button").forEach((b) => b.classList.toggle("on", (b.dataset.sfx === "on") === !!C.sfx.on));
+    document.querySelectorAll("#cfgWhere button").forEach((b) => b.classList.toggle("on", b.dataset.where === (C.sfx.where || "overlay")));
     $("cfgVol").value = Math.round(C.sfx.vol * 100);
     $("volLabel").textContent = Math.round(C.sfx.vol * 100) + "%";
     document.querySelectorAll("#cfgHud button").forEach((b) => b.classList.toggle("on", b.dataset.hud === C.layout.hud));
@@ -396,7 +423,7 @@
         miss: parseInt(r.querySelector(".e-miss").value, 10),
       };
     });
-    C.sfx = { on: C.sfx.on, vol: +$("cfgVol").value / 100 };
+    C.sfx = { on: C.sfx.on, vol: +$("cfgVol").value / 100, where: C.sfx.where || "overlay" };
     C.final = { limitSec: +$("cfgLimit").value, goal: +$("cfgGoal").value, burst: +$("cfgBurst").value, missDq: +$("cfgMissDq").value };
   }
 
@@ -447,6 +474,7 @@
       return;
     }
     if (t.dataset.sfx) { readCfg(); C.sfx.on = t.dataset.sfx === "on"; return renderCfg(); }
+    if (t.dataset.where) { readCfg(); C.sfx.where = t.dataset.where; return renderCfg(); }
     if (t.dataset.try) {
       const a = new Audio(`sfx/${t.dataset.try}.mp3`);
       a.addEventListener("error", () => { a.src = `sfx/${t.dataset.try}.wav`; a.play().catch(() => {}); });
