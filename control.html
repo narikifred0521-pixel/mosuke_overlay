@@ -508,8 +508,11 @@
   onConfig(() => { applyConfig(loadConfig()); if (!$("pageCfg").hidden) { C = loadConfig(); renderCfg(); } render(); });
   if (!playerByNo(S.player)) S.player = PLAYERS[0].no;
   render();
+  // ルームがまだ空なら、この端末の設定と記録を最初に送っておく
   if (fbDb) fbDb.ref(`mosuke_overlay/${ROOM}`).once("value").then((snap) => {
-    if (!snap.val()) { saveConfig(loadConfig()); saveState(S); }
+    const v = snap.val() || {};
+    if (!v.config) saveConfig(loadConfig());
+    if (!v.state) saveState(S);
   }).catch(() => setFbStatus("読み込み不可（DBのルール未設定）"));
 </script>
 </body>
