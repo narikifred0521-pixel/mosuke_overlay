@@ -3,21 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#101A33">
+<meta name="theme-color" content="#0B85AA">
 <title>川西モルック検定RTA 操作</title>
 <style>
-  :root { --navy: #101A33; --navy2: #1B284A; --hud: #2B3450; --red: #E01F33; --gold: #F0B429; --white: #F5F6FA; --gray: #8A93AB; --line: #4A5575; }
+  :root { --navy: #F7FBFC; --navy2: #FFFFFF; --hud: #FFFFFF; --red: #FF5601; --gold: #0B85AA; --white: #17313B; --gray: #6F858C; --line: #D5E1E4; }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { background: var(--navy); color: var(--white); font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
     padding: 12px 16px calc(24px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto; }
   button { font: inherit; border: 0; border-radius: 14px; cursor: pointer; color: inherit; }
   button:disabled { opacity: .35; cursor: default; }
   .top { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--gray); }
-  .conn.ok { color: #6fd39a; } .conn.ng { color: var(--gold); }
+  .conn.ok { color: #1E9E62; } .conn.ng { color: var(--red); }
   .time { font-size: 54px; font-weight: 900; font-variant-numeric: tabular-nums; text-align: center; margin: 6px 0 2px; letter-spacing: -1px; }
   .time.wait { color: var(--gray); } .time.goal { color: var(--gold); }
   .sub { text-align: center; color: var(--gray); font-size: 14px; font-weight: 700; }
-  .card { background: var(--hud); border-radius: 16px; padding: 14px 16px; margin-top: 12px; }
+  .card { background: var(--hud); box-shadow: 0 2px 10px rgba(23,49,59,.1); border-radius: 16px; padding: 14px 16px; margin-top: 12px; }
   .g { display: flex; align-items: baseline; gap: 10px; }
   .g b { font-size: 40px; color: var(--gold); font-weight: 900; }
   .g span { font-size: 22px; font-weight: 900; }
@@ -25,18 +25,18 @@
   .cond { color: var(--gray); font-size: 13px; margin-top: 2px; }
   .slots { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 3px; margin-top: 12px; }
   .slot { aspect-ratio: 1; border-radius: 50%; border: 2px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; }
-  .slot.c { background: var(--gold); border-color: var(--gold); color: var(--navy); } .slot.c::before { content: "○"; }
-  .slot.m { background: var(--red); border-color: var(--red); } .slot.m::before { content: "✕"; }
+  .slot.c { background: var(--gold); border-color: var(--gold); color: #fff; } .slot.c::before { content: "○"; }
+  .slot.m { background: var(--red); border-color: var(--red); color: #fff; } .slot.m::before { content: "✕"; }
   .slot.next { border-color: var(--white); }
   .count { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 10px; font-weight: 800; font-size: 14px; white-space: nowrap; }
   .count b { color: var(--gold); font-size: 24px; }
-  .note.warn { color: var(--gold); } .note.pass { color: var(--gold); } .note.fail { color: var(--red); }
+  .note.warn { color: var(--red); } .note.pass { color: var(--gold); } .note.fail { color: var(--red); }
   .big { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
   .big button { height: 150px; font-size: 64px; font-weight: 900; }
-  .ok { background: var(--gold); color: var(--navy); }
+  .ok { background: var(--gold); color: #fff; }
   .ng { background: var(--red); color: #fff; }
   .wide { width: 100%; height: 72px; font-size: 22px; font-weight: 900; margin-top: 12px; }
-  .wide.go { background: var(--gold); color: var(--navy); }
+  .wide.go { background: var(--gold); color: #fff; }
   .wide.retry { background: var(--red); color: #fff; }
   .row { display: flex; gap: 8px; margin-top: 12px; }
   .row button { flex: 1; height: 50px; background: var(--navy2); border: 2px solid var(--line); font-weight: 800; font-size: 15px; }
@@ -95,7 +95,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="kentei.js?v=1"></script>
+<script src="kentei.js?v=2"></script>
 <script>
   const $ = (id) => document.getElementById(id);
   let S = loadState();

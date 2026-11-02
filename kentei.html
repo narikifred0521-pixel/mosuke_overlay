@@ -6,117 +6,110 @@
 <title>川西モルック検定RTA Overlay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@1,700;1,800;1,900&family=Noto+Sans+JP:wght@700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@800;900&family=Noto+Sans+JP:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
+  /* もるまさチャンネルの配色（動画内スライドと同じ）：ブルー #0B85AA／オレンジ #FF5601／白ベース */
   :root {
-    --navy: #101A33; --navy2: #1B284A; --hud: #2B3450;
-    --red: #E01F33; --gold: #F0B429; --green: #3FA36B; --white: #F5F6FA; --gray: #8A93AB; --line: #4A5575;
-    --jp: "Hiragino Sans", "Noto Sans JP", sans-serif;
-    --en: "Barlow", "Hiragino Sans", sans-serif;
+    --blue: #0B85AA; --blue-d: #075E78; --orange: #FF5601; --ink: #17313B; --bg: #F7FBFC; --card: #FFFFFF;
+    --line: #E7EEF0; --mute: #8FA3AA; --soft: #EAF5F8; --soft-o: #FFF1E9;
+    --jp: "Noto Sans JP", "Hiragino Sans", sans-serif;
+    --num: "Inter", "Noto Sans JP", sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
-  body { font-family: var(--jp); color: var(--white); position: relative; }
-  /* 中身は1920×1080で作って、画面サイズに合わせて丸ごと拡大縮小する */
+  body { font-family: var(--jp); color: var(--ink); position: relative; }
   #stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px;
     transform: translate(-50%, -50%) scale(var(--k, 1)); transform-origin: center center; }
-  /* ?bg=1 のときだけ、透過が分かるチェック柄を敷く */
-  body.bg { background-color: #20242e; background-image:
-      linear-gradient(45deg, #171a22 25%, transparent 25%, transparent 75%, #171a22 75%),
-      linear-gradient(45deg, #171a22 25%, transparent 25%, transparent 75%, #171a22 75%);
+  body.bg { background-color: #5d6b70; background-image:
+      linear-gradient(45deg, #4e5a5e 25%, transparent 25%, transparent 75%, #4e5a5e 75%),
+      linear-gradient(45deg, #4e5a5e 25%, transparent 25%, transparent 75%, #4e5a5e 75%);
     background-size: 120px 120px; background-position: 0 0, 60px 60px; }
-  .en { font-family: var(--en); font-style: italic; font-weight: 900; }
+  .num { font-family: var(--num); font-weight: 900; font-variant-numeric: tabular-nums; }
   .layer { position: absolute; transition: opacity .35s, transform .45s cubic-bezier(.2,.9,.2,1); }
   .layer.hide { opacity: 0; pointer-events: none; }
+  .card { background: var(--card); border-radius: 20px; box-shadow: 0 8px 24px rgba(23,49,59,.22); overflow: hidden; }
 
   #unlock { display: none; position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 99;
-    background: var(--gold); color: var(--navy); border: 0; border-radius: 999px;
+    background: var(--orange); color: #fff; border: 0; border-radius: 999px;
     padding: 14px 26px; font: inherit; font-size: 22px; font-weight: 900; cursor: pointer; }
 
   /* ── タイマー（左上） ── */
-  #timer { left: 30px; top: 30px; background: rgba(16,26,51,.92); border-radius: 20px; padding: 16px 30px 18px 34px;
-    box-shadow: 0 10px 30px rgba(0,0,0,.35); overflow: hidden; }
+  #timer { left: 30px; top: 30px; min-width: 470px; }
   #timer.hide { transform: translateX(-40px); }
-  #timer::before { content: ""; position: absolute; left: 0; top: 20px; width: 10px; height: 40px; background: var(--red); }
-  .tm-title { font-size: 26px; font-weight: 900; color: var(--gold); letter-spacing: 1px; white-space: nowrap; }
-  .tm-title small { font-size: 22px; color: var(--gray); margin-left: 10px; }
-  .tm-time { font-size: 104px; line-height: .95; letter-spacing: -2px; font-variant-numeric: tabular-nums; margin-top: 4px; }
-  .tm-time.wait { color: var(--gray); }
-  .tm-time.goal { color: var(--gold); }
-  .tm-sub { font-size: 22px; color: var(--gray); font-weight: 800; margin-top: 4px; white-space: nowrap; }
+  .tm-head { background: var(--blue); color: #fff; font-size: 26px; font-weight: 900; padding: 10px 26px; white-space: nowrap; letter-spacing: 1px; }
+  .tm-head small { font-size: 20px; opacity: .8; margin-left: 10px; }
+  .tm-body { padding: 8px 26px 14px; }
+  .tm-time { font-size: 104px; line-height: 1; letter-spacing: -2px; color: var(--ink); }
+  .tm-time.wait { color: var(--mute); }
+  .tm-time.goal { color: var(--orange); }
+  .tm-sub { font-size: 22px; color: var(--blue-d); font-weight: 800; margin-top: 2px; white-space: nowrap; }
 
   /* ── 級の進み（右上） ── */
-  #progress { right: 30px; top: 30px; background: rgba(16,26,51,.92); border-radius: 18px; padding: 14px 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+  #progress { right: 30px; top: 30px; padding: 14px 18px 12px; }
   #progress.hide { transform: translateX(40px); }
   .pg-row { display: flex; gap: 8px; }
-  .pg { width: 52px; height: 52px; border-radius: 10px; background: var(--navy2); border: 3px solid var(--line);
-    display: flex; align-items: center; justify-content: center; font-size: 26px; color: var(--gray); transition: all .3s; }
-  .pg.done { background: var(--gold); border-color: var(--gold); color: var(--navy); }
-  .pg.cur { border-color: var(--white); color: var(--white); animation: blink 1.2s infinite; }
+  .pg { width: 52px; height: 52px; border-radius: 12px; background: var(--card); border: 3px solid var(--line);
+    display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--mute); transition: all .3s; }
+  .pg.done { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .pg.cur { border-color: var(--orange); color: var(--orange); background: var(--soft-o); animation: blink 1.2s infinite; }
   .pg.key { position: relative; }
-  .pg.key::after { content: ""; position: absolute; bottom: -12px; left: 50%; width: 8px; height: 8px; margin-left: -4px;
-    border-radius: 50%; background: var(--red); }
-  .pg-cap { display: flex; justify-content: space-between; font-size: 18px; color: var(--gray); font-weight: 800; margin-top: 12px; }
+  .pg.key::after { content: ""; position: absolute; bottom: -11px; left: 50%; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: var(--orange); }
+  .pg-cap { display: flex; justify-content: space-between; font-size: 18px; color: var(--mute); font-weight: 800; margin-top: 12px; }
 
   /* ── 今の級（右下） ── */
-  #hud { right: 30px; bottom: 30px; width: 860px; background: var(--hud); border-radius: 22px; padding: 22px 32px 24px 36px;
-    box-shadow: 0 10px 30px rgba(0,0,0,.35); overflow: hidden; }
+  #hud { right: 30px; bottom: 30px; width: 860px; }
   #hud.hide { transform: translateX(40px); }
-  #hud::before { content: ""; position: absolute; left: 0; top: 24px; width: 11px; height: 64px; background: var(--red); }
-  .hd-title { display: flex; align-items: baseline; gap: 18px; height: 70px; }
-  .hd-g { color: var(--gold); font-size: 72px; line-height: 1; white-space: nowrap; }
-  .hd-g span { font-family: var(--jp); font-style: normal; font-size: 40px; margin-left: 2px; }
-  .hd-name { font-size: 46px; font-weight: 900; white-space: nowrap; }
-  .hd-try { margin-left: auto; font-size: 28px; font-weight: 800; color: var(--gray); white-space: nowrap; }
-  .hd-cond { font-size: 24px; color: var(--gray); font-weight: 700; margin-top: 6px; }
-  .slots { display: flex; gap: 10px; margin-top: 18px; }
-  .slot { width: 56px; height: 56px; border-radius: 50%; border: 3px solid var(--line); display: flex; align-items: center;
-    justify-content: center; font-size: 32px; font-weight: 900; transition: all .3s; }
-  .slot.c { background: var(--gold); border-color: var(--gold); color: var(--navy); }
+  .hd-top { display: flex; align-items: center; gap: 18px; background: var(--blue); color: #fff; padding: 12px 28px; }
+  .hd-g { font-size: 60px; line-height: 1; white-space: nowrap; }
+  .hd-g span { font-family: var(--jp); font-size: 34px; margin-left: 2px; }
+  .hd-name { font-size: 44px; font-weight: 900; white-space: nowrap; }
+  .hd-try { margin-left: auto; font-size: 26px; font-weight: 900; background: #fff; color: var(--blue-d); border-radius: 999px; padding: 4px 18px; white-space: nowrap; }
+  .hd-body { padding: 14px 28px 20px; }
+  .hd-cond { font-size: 24px; color: var(--blue-d); font-weight: 800; }
+  .slots { display: flex; gap: 10px; margin-top: 14px; }
+  .slot { width: 56px; height: 56px; border-radius: 50%; border: 3px solid var(--line); background: var(--bg); display: flex; align-items: center;
+    justify-content: center; font-size: 30px; font-weight: 900; transition: all .3s; }
+  .slot.c { background: var(--blue); border-color: var(--blue); color: #fff; }
   .slot.c::before { content: "○"; }
-  .slot.m { background: var(--red); border-color: var(--red); color: #fff; }
+  .slot.m { background: var(--orange); border-color: var(--orange); color: #fff; }
   .slot.m::before { content: "✕"; }
-  .slot.next { border-color: var(--white); }
+  .slot.next { border-color: var(--ink); background: #fff; }
   .slot.pop { animation: pop .5s; }
-  .hd-foot { display: flex; align-items: baseline; margin-top: 16px; gap: 22px; }
-  .hd-count { font-size: 40px; white-space: nowrap; }
-  .hd-count b { color: var(--gold); font-size: 56px; }
-  .hd-count i { color: var(--gray); font-style: normal; font-size: 30px; }
-  .hd-note { margin-left: auto; font-size: 32px; font-weight: 900; white-space: nowrap; }
-  .hd-note.warn { color: var(--gold); }
-  .hd-note.pass { color: var(--gold); }
-  .hd-note.fail { color: var(--red); }
-  #hud.st-pass { box-shadow: 0 0 0 4px var(--gold), 0 10px 30px rgba(0,0,0,.35); }
-  #hud.st-fail { box-shadow: 0 0 0 4px var(--red), 0 10px 30px rgba(0,0,0,.35); }
+  .hd-foot { display: flex; align-items: baseline; margin-top: 14px; gap: 22px; }
+  .hd-count { font-size: 36px; white-space: nowrap; color: var(--ink); }
+  .hd-count b { color: var(--blue); font-size: 56px; }
+  .hd-count i { color: var(--mute); font-style: normal; font-family: var(--jp); font-size: 26px; }
+  .hd-note { margin-left: auto; font-size: 30px; font-weight: 900; white-space: nowrap; color: var(--blue-d); }
+  .hd-note.warn { color: var(--orange); }
+  .hd-note.pass { color: var(--blue); }
+  .hd-note.fail { color: var(--orange); }
+  #hud.st-pass { box-shadow: 0 0 0 5px var(--blue), 0 8px 24px rgba(23,49,59,.22); }
+  #hud.st-fail { box-shadow: 0 0 0 5px var(--orange), 0 8px 24px rgba(23,49,59,.22); }
 
   /* ── 演出バナー ── */
   #fx { left: 0; top: 0; width: 1920px; height: 1080px; pointer-events: none; display: none; }
   #fx.play { display: block; }
-  .fx-band { position: absolute; left: -200px; right: -200px; top: 400px; height: 260px; transform: skewY(-4deg) scaleX(0); }
+  .fx-band { position: absolute; left: -200px; right: -200px; height: 240px; transform: scaleX(0); }
   #fx.play .fx-band { animation: band 2.8s cubic-bezier(.2,.9,.2,1) forwards; }
-  .fx-band.b1 { background: var(--red); top: 380px; }
-  .fx-band.b2 { background: var(--gold); top: 420px; height: 220px; animation-delay: .08s !important; }
-  .fx-text { position: absolute; left: 0; right: 0; top: 420px; height: 220px; display: flex; flex-direction: column; align-items: center;
-    justify-content: center; transform: skewY(-4deg); opacity: 0; }
+  .fx-band.b1 { background: var(--orange); top: 404px; height: 272px; }
+  .fx-band.b2 { background: #fff; top: 420px; animation-delay: .08s !important; }
+  .fx-text { position: absolute; left: 0; right: 0; top: 420px; height: 240px; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; opacity: 0; }
   #fx.play .fx-text { animation: txt 2.8s cubic-bezier(.2,.9,.2,1) forwards; }
-  .fx-main { font-size: 170px; line-height: .9; color: var(--navy); letter-spacing: 2px; }
-  .fx-sub { font-size: 42px; font-weight: 900; color: var(--navy); margin-top: 8px; }
-  #fx.fail .b2 { background: var(--navy); }
-  #fx.fail .fx-main { color: var(--red); } #fx.fail .fx-sub { color: var(--white); }
-  #fx.big .b1 { background: var(--gold); } #fx.big .b2 { background: var(--red); }
-  #fx.big .fx-main, #fx.big .fx-sub { color: var(--white); }
-  #fx.go .b1 { background: var(--gold); } #fx.go .b2 { background: var(--navy); }
-  #fx.go .fx-main { color: var(--gold); } #fx.go .fx-sub { color: var(--white); }
+  .fx-main { font-size: 150px; line-height: 1; color: var(--blue); letter-spacing: 2px; }
+  .fx-sub { font-size: 40px; font-weight: 900; color: var(--ink); margin-top: 8px; }
+  #fx.fail .b1 { background: var(--ink); } #fx.fail .fx-main { color: var(--orange); }
+  #fx.big .b1 { background: var(--blue); } #fx.big .b2 { background: var(--orange); }
+  #fx.big .fx-main, #fx.big .fx-sub { color: #fff; }
+  #fx.go .b1 { background: var(--blue); } #fx.go .fx-main { color: var(--blue-d); }
   #fx.big.final .fx-band, #fx.big.final .fx-text { animation-duration: 6s; }
   .fx-flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
   #fx.play .fx-flash { animation: flash .5s; }
 
-  @keyframes band { 0% { transform: skewY(-4deg) scaleX(0); } 14% { transform: skewY(-4deg) scaleX(1); }
-    82% { transform: skewY(-4deg) scaleX(1); } 100% { transform: skewY(-4deg) scaleX(1) translateX(2400px); } }
-  @keyframes txt { 0%, 10% { opacity: 0; transform: skewY(-4deg) scale(1.6); } 20% { opacity: 1; transform: skewY(-4deg) scale(1); }
-    80% { opacity: 1; transform: skewY(-4deg) translateX(0); } 100% { opacity: 0; transform: skewY(-4deg) translateX(1600px); } }
-  @keyframes flash { 0% { opacity: 0; } 15% { opacity: .55; } 100% { opacity: 0; } }
+  @keyframes band { 0% { transform: scaleX(0); } 14% { transform: scaleX(1); } 82% { transform: scaleX(1); } 100% { transform: scaleX(1) translateX(2400px); } }
+  @keyframes txt { 0%, 10% { opacity: 0; transform: scale(1.4); } 20% { opacity: 1; transform: scale(1); }
+    80% { opacity: 1; transform: translateX(0); } 100% { opacity: 0; transform: translateX(1600px); } }
+  @keyframes flash { 0% { opacity: 0; } 15% { opacity: .5; } 100% { opacity: 0; } }
   @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
   @keyframes blink { 50% { border-color: var(--line); } }
 </style>
@@ -130,13 +123,13 @@
   <div id="fx" class="layer">
     <div class="fx-flash"></div>
     <div class="fx-band b1"></div><div class="fx-band b2"></div>
-    <div class="fx-text"><div class="fx-main en"></div><div class="fx-sub"></div></div>
+    <div class="fx-text"><div class="fx-main num"></div><div class="fx-sub"></div></div>
   </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="kentei.js?v=1"></script>
+<script src="kentei.js?v=2"></script>
 <script>
   const PARAMS = new URLSearchParams(location.search);
   if (PARAMS.get("bg")) document.body.classList.add("bg");
@@ -177,15 +170,15 @@
     const doneN = Object.keys(S.done).length;
     const startClock = S.start ? new Date(S.start).toLocaleTimeString("ja-JP", { hour: "numeric", minute: "2-digit" }) : "";
     $("timer").innerHTML = `
-      <div class="tm-title">川西モルック検定 RTA<small>全12級</small></div>
-      <div class="tm-time en ${cls}">${fmtTime(ms)}</div>
-      <div class="tm-sub">${S.stop ? "全級クリア！" : S.start ? `${startClock} スタート ／ 合格 ${doneN} / 12` : "スタート前"}</div>`;
+      <div class="tm-head">川西モルック検定 RTA<small>全12級</small></div>
+      <div class="tm-body"><div class="tm-time num ${cls}">${fmtTime(ms)}</div>
+      <div class="tm-sub">${S.stop ? "全級クリア！" : S.start ? `${startClock} スタート ／ 合格 ${doneN} / 12` : "スタート前"}</div></div>`;
   }
 
   function renderProgress() {
     $("progress").innerHTML = `<div class="pg-row">${GRADES.map((x) => {
       const cls = S.done[x.g] != null ? "done" : x.g === S.grade && !S.stop ? "cur" : "";
-      return `<div class="pg en ${cls} ${x.g === 5 ? "key" : ""}">${x.g}</div>`;
+      return `<div class="pg num ${cls} ${x.g === 5 ? "key" : ""}">${x.g}</div>`;
     }).join("")}</div><div class="pg-cap"><span>12級</span><span>● 5級で入会資格</span><span>1級</span></div>`;
   }
 
@@ -204,18 +197,18 @@
       note = missLeft === 0 ? "もうミスできない" : `あと${t.left}本／ミスはあと${missLeft}回まで`;
       ncls = missLeft <= 1 ? "warn" : "";
     }
-    $("hud").className = `layer ${S.show.hud ? "" : "hide"} ${t.st === "pass" ? "st-pass" : t.st === "fail" ? "st-fail" : ""}`;
+    $("hud").className = `layer card ${S.show.hud ? "" : "hide"} ${t.st === "pass" ? "st-pass" : t.st === "fail" ? "st-fail" : ""}`;
     $("hud").innerHTML = `
-      <div class="hd-title"><div class="hd-g en">${S.grade}<span>級</span></div><div class="hd-name">${gi.name}</div>
+      <div class="hd-top"><div class="hd-g num">${S.grade}<span>級</span></div><div class="hd-name">${gi.name}</div>
         <div class="hd-try">${S.tries[S.grade] || 1}回目</div></div>
-      <div class="hd-cond">${gi.cond}　12投中7本で合格</div>
+      <div class="hd-body"><div class="hd-cond">${gi.cond}　12投中7本で合格</div>
       <div class="slots">${slots}</div>
-      <div class="hd-foot"><div class="hd-count en"><b>${t.c}</b> / 7<i>　成功</i></div><div class="hd-note ${ncls}">${note}</div></div>`;
+      <div class="hd-foot"><div class="hd-count num"><b>${t.c}</b> / 7<i>　成功</i></div><div class="hd-note ${ncls}">${note}</div></div></div>`;
   }
 
   function render(popIdx) {
-    $("timer").className = `layer ${S.show.timer ? "" : "hide"}`;
-    $("progress").className = `layer ${S.show.progress ? "" : "hide"}`;
+    $("timer").className = `layer card ${S.show.timer ? "" : "hide"}`;
+    $("progress").className = `layer card ${S.show.progress ? "" : "hide"}`;
     renderTimer(); renderProgress(); renderHud(popIdx);
   }
 
