@@ -49,7 +49,7 @@ const K_ROOM = "kentei_rta_room";
 
 function blankState() {
   return { start: 0, stop: 0, limit: "18:00:00", pace: DEFAULT_PACE.slice(), grade: 12, log: [], tries: { 12: 1 }, done: {}, hist: [],
-    show: { timer: true, hud: true, progress: true }, sfx: { control: true, overlay: true, vol: 0.8 }, fx: null, t: Date.now() };
+    show: { timer: true, hud: true, progress: true }, size: 0.75, sfx: { control: false, overlay: false, vol: 0.8 }, sfxOff: 1, fx: null, t: Date.now() };
 }
 
 // Firebase は空の配列・オブジェクトを消し、数字キーを配列にするので形を整える
@@ -58,6 +58,10 @@ function normalize(s) {
   s = Object.assign(b, s || {});
   s.show = Object.assign(blankState().show, s.show);
   s.sfx = Object.assign(blankState().sfx, s.sfx);
+  // 2026-11-02 古田さん「音を消したい」→ 前の状態に残っていた音ONを一度だけOFFにする
+  if (s.sfxOff !== 1) { s.sfx.control = false; s.sfx.overlay = false; s.sfxOff = 1; }
+  // 表示の大きさ（1 = 作ったときの大きさ）。操作画面の「表示の大きさ」で変える
+  s.size = Math.min(1.2, Math.max(0.4, Number(s.size) || 0.75));
   s.pace = (Array.isArray(s.pace) ? s.pace : Object.values(s.pace || {})).map(Number);
   if (s.pace.length !== 12 || s.pace.some((x) => !(x > 0))) s.pace = DEFAULT_PACE.slice();
   const toObj = (x) => {

@@ -82,6 +82,7 @@
     <label><input type="checkbox" data-show="left"> 残り時間</label>
     <label><input type="checkbox" data-show="pace"> 目安との差</label>
   </div>
+  <div class="set">表示の大きさ <button id="sizeDn">小さく</button> <b id="sizeV"></b> <button id="sizeUp">大きく</button></div>
   <div class="set">
     <label><input type="checkbox" data-sfx="control"> この端末で音</label>
     <label><input type="checkbox" data-sfx="overlay"> オーバーレイで音</label>
@@ -112,7 +113,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="kentei.js?v=6"></script>
+<script src="kentei.js?v=7"></script>
 <script>
   const $ = (id) => document.getElementById(id);
   let S = loadState();
@@ -229,6 +230,7 @@
     document.querySelectorAll("[data-show]").forEach((c) => { c.checked = S.show[c.dataset.show] !== false; });
     if (document.activeElement !== $("limit")) $("limit").value = S.limit || "18:00:00";
     document.querySelectorAll("[data-sfx]").forEach((c) => { c.checked = !!S.sfx[c.dataset.sfx]; });
+    $("sizeV").textContent = Math.round(S.size * 100) + "%";
     $("log").textContent = logText() || "まだ記録なし";
   }
 
@@ -245,6 +247,9 @@
   // ── 設定 ──
   document.querySelectorAll("[data-show]").forEach((c) => c.onchange = () => commit(() => { S.show[c.dataset.show] = c.checked; }));
   document.querySelectorAll("[data-sfx]").forEach((c) => c.onchange = () => commit(() => { S.sfx[c.dataset.sfx] = c.checked; }));
+  const resize = (d) => commit(() => { S.size = Math.min(1.2, Math.max(0.4, Math.round((S.size + d) * 20) / 20)); });
+  $("sizeDn").onclick = () => resize(-0.05);
+  $("sizeUp").onclick = () => resize(0.05);
   $("undo").onclick = undo;
   function toast(t) { const el = $("toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast.tm); toast.tm = setTimeout(() => el.classList.remove("on"), 1500); }
   // 見せ場（ハプニング・いいリアクション・面白いひと言）と、カメラの録画を回した瞬間を記録する。編集でマーカーになる
@@ -296,7 +301,7 @@
   $("reset").onclick = () => {
     if (!confirm("タイマーも記録も全部消す？")) return;
     if (!confirm("本当に消す？（戻せない）")) return;
-    const keep = { show: S.show, sfx: S.sfx };
+    const keep = { show: S.show, sfx: S.sfx, size: S.size };
     S = Object.assign(blankState(), keep);
     undoStack = []; try { localStorage.removeItem(UNDO_KEY); } catch (e) {}
     saveState(S); render();
