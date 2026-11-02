@@ -51,6 +51,10 @@
   .log { font-size: 13px; line-height: 1.7; color: var(--white); white-space: pre-wrap; font-variant-numeric: tabular-nums; }
   .hint { color: var(--gray); font-size: 12px; margin-top: 6px; line-height: 1.5; }
   a { color: var(--gold); }
+  #star { border-color: #FF5601; color: #FF5601; } #rec { border-color: var(--gold); color: var(--gold); }
+  .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: #17313B; color: #fff;
+    padding: 10px 18px; border-radius: 999px; font-weight: 800; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; white-space: nowrap; }
+  .toast.on { opacity: 1; }
 </style>
 </head>
 <body>
@@ -60,8 +64,13 @@
 <div id="main"></div>
 
 <div class="row">
+  <button id="star">★ 見せ場</button>
+  <button id="rec">🎬 録画スタート</button>
+</div>
+<div class="row">
   <button id="undo">↶ 1つ戻す</button>
 </div>
+<div id="toast" class="toast"></div>
 
 <details>
   <summary>表示・音</summary>
@@ -80,7 +89,8 @@
 <details>
   <summary>記録（級ごとのタイム）</summary>
   <div id="log" class="log"></div>
-  <div class="set"><button id="copy">テキストでコピー</button></div>
+  <div class="set"><button id="copy">テキストでコピー</button> <button id="csv">編集用CSVを保存</button></div>
+  <p class="hint">編集用CSVは1投ごとの時刻（ミリ秒まで）・級・○✕。取り消しやリセットをしても裏で残っている。撮影が終わったら保存してAIに渡せば、合否のマーカーや効果音の位置に使える。</p>
 </details>
 
 <details>
@@ -95,7 +105,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="kentei.js?v=2"></script>
+<script src="kentei.js?v=3"></script>
 <script>
   const $ = (id) => document.getElementById(id);
   let S = loadState();
@@ -126,6 +136,7 @@
   // ── 操作 ──
   function start() {
     commit(() => { S.start = Date.now(); S.stop = 0; fx("go", "START", "川西モルック検定 RTA　12級から"); });
+    logEvent({ ev: "start", at: S.start, el: 0, g: S.grade, try: 1 });
     playSfx("start");
   }
 
@@ -133,7 +144,9 @@
     if (!S.start || S.stop || tally(S.log).st !== "play") return;
     commit(() => {
       S.log.push(v);
-      const t = tally(S.log), gi = gradeInfo(S.grade), now = elapsed(S);
+      const t = tally(S.log), gi = gradeInfo(S.grade), now = elapsed(S), tr = S.tries[S.grade] || 1;
+      logEvent({ ev: "throw", el: now, g: S.grade, try: tr, n: S.log.length, r: v, c: t.c });
+      if (t.st !== "play") logEvent({ ev: t.st === "pass" ? (S.grade === 1 ? "goal" : "pass") : "fail", el: now, g: S.grade, try: tr, c: t.c });
       if (t.st === "pass") {
         S.done[S.grade] = now;
         S.hist.push({ g: S.grade, try: S.tries[S.grade] || 1, log: S.log.slice(), r: "pass", at: now });
@@ -150,6 +163,7 @@
   function next() {
     commit(() => {
       S.grade -= 1; S.log = []; S.tries[S.grade] = S.tries[S.grade] || 1;
+      logEvent({ ev: "next", el: elapsed(S), g: S.grade, try: S.tries[S.grade] });
       fx("go", `${S.grade}級`, gradeInfo(S.grade).name);
     });
   }
@@ -157,6 +171,7 @@
   function retry() {
     commit(() => {
       S.log = []; S.tries[S.grade] = (S.tries[S.grade] || 1) + 1;
+      logEvent({ ev: "retry", el: elapsed(S), g: S.grade, try: S.tries[S.grade] });
       fx("go", `${S.grade}級`, `${S.tries[S.grade]}回目　${gradeInfo(S.grade).name}`);
     });
   }
@@ -164,6 +179,7 @@
   function undo() {
     if (!undoStack.length) return;
     S = normalize(JSON.parse(undoStack.pop()));
+    logEvent({ ev: "undo", el: elapsed(S), g: S.grade, try: S.tries[S.grade] || 1, n: S.log.length });
     S.fx = null;
     try { localStorage.setItem(UNDO_KEY, JSON.stringify(undoStack)); } catch (e) {}
     saveState(S);
@@ -221,6 +237,18 @@
   document.querySelectorAll("[data-show]").forEach((c) => c.onchange = () => commit(() => { S.show[c.dataset.show] = c.checked; }));
   document.querySelectorAll("[data-sfx]").forEach((c) => c.onchange = () => commit(() => { S.sfx[c.dataset.sfx] = c.checked; }));
   $("undo").onclick = undo;
+  function toast(t) { const el = $("toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast.tm); toast.tm = setTimeout(() => el.classList.remove("on"), 1500); }
+  // 見せ場（ハプニング・いいリアクション・面白いひと言）と、カメラの録画を回した瞬間を記録する。編集でマーカーになる
+  $("star").onclick = () => { logEvent({ ev: "star", el: elapsed(S), g: S.grade, try: S.tries[S.grade] || 1, n: S.log.length }); toast("★ 見せ場を記録"); };
+  $("rec").onclick = () => { logEvent({ ev: "rec", el: elapsed(S), g: S.grade, try: S.tries[S.grade] || 1, n: S.log.length }); toast("🎬 録画スタートを記録"); };
+  $("csv").onclick = async () => {
+    const csv = eventsCsv(await loadEvents());
+    const d = new Date(), p = (x) => String(x).padStart(2, "0");
+    const name = `kentei_log_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.csv`;
+    const file = new File([csv], name, { type: "text/csv" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file] }); return; } catch (e) { if (e.name === "AbortError") return; } }
+    const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = name; a.click();
+  };
   $("copy").onclick = () => navigator.clipboard.writeText(logText()).then(() => alert("コピーした"), () => alert("コピーできなかった"));
 
   $("room").value = ROOM;
@@ -252,6 +280,7 @@
       for (const k of Object.keys(S.done)) if (+k <= g) delete S.done[k];
       for (const x of GRADES) if (x.g > g && S.done[x.g] == null) S.done[x.g] = elapsed(S);
       S.grade = g; S.log = []; S.stop = 0; S.tries[g] = S.tries[g] || 1; S.fx = null;
+      logEvent({ ev: "fix", el: elapsed(S), g, try: S.tries[g] });
     });
   };
 

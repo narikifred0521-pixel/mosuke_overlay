@@ -124,6 +124,45 @@ function onState(cb) {
   if (fbDb) fbRef().on("value", (snap) => take(snap.val()), () => setFbStatus("読み込み不可"));
 }
 
+// ── 編集用ログ（裏で全部残す。取り消し・リセットしても消さない） ──────────
+// 1行 = { at: 時刻ms, ev: start|throw|pass|fail|next|retry|undo|goal|fix, g, try, n, r, el: 経過ms }
+// この端末の localStorage と Firebase（mosuke_overlay/<room>/kentei_log）の両方に追記する
+const K_EVENTS = "kentei_rta_events";
+
+function logEvent(e) {
+  e = Object.assign({ at: Date.now() }, e);
+  try {
+    const a = JSON.parse(localStorage.getItem(K_EVENTS) || "[]");
+    a.push(e);
+    localStorage.setItem(K_EVENTS, JSON.stringify(a));
+  } catch (x) {}
+  if (fbDb) fbDb.ref(`mosuke_overlay/${ROOM}/kentei_log`).push(e).catch(() => {});
+}
+
+async function loadEvents() {
+  let local = [];
+  try { local = JSON.parse(localStorage.getItem(K_EVENTS) || "[]"); } catch (x) {}
+  if (!fbDb) return local;
+  try {
+    const snap = await fbDb.ref(`mosuke_overlay/${ROOM}/kentei_log`).once("value");
+    const remote = Object.values(snap.val() || {});
+    const seen = new Set(remote.map((e) => `${e.at}|${e.ev}`));
+    return remote.concat(local.filter((e) => !seen.has(`${e.at}|${e.ev}`))).sort((a, b) => a.at - b.at);
+  } catch (x) { return local; }
+}
+
+function eventsCsv(evs) {
+  const p = (x, n = 2) => String(x).padStart(n, "0");
+  const clock = (ms) => { const d = new Date(ms); return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(), 3)}`; };
+  const name = { start: "スタート", throw: "投擲", pass: "合格", fail: "不合格", next: "次の級へ", retry: "やり直し", undo: "取り消し", goal: "ゴール", fix: "修正", star: "★見せ場", rec: "録画スタート" };
+  const rows = [["時刻", "経過", "種類", "級", "回目", "投目", "結果", "成功数"]];
+  for (const e of evs) {
+    rows.push([clock(e.at), e.el != null ? fmtTime(e.el) : "", name[e.ev] || e.ev, e.g || "", e.try || "", e.n || "",
+      e.r === "c" ? "○" : e.r === "m" ? "✕" : "", e.c != null ? e.c : ""]);
+  }
+  return "﻿" + rows.map((r) => r.join(",")).join("\n");
+}
+
 // ── 効果音（MöSUKEと同じ sfx/ を使う） ──────────────
 function makeSounds(names) {
   const o = {};

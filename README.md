@@ -101,3 +101,5 @@ MöSUKEとは別ページ。12級→1級を「12投中7本」で順に合格し�
 - 操作: `kentei_control.html?room=ルーム名`（スマホ。○／✕、合格で「次へ」、不合格で「もう一度」、1つ戻す）
 - オーバーレイ: `kentei.html?room=ルーム名`（左上タイマー・右上12級の進み・右下に今の級と○✕）
 - 同期は Firebase の `mosuke_overlay/<room>/kentei`。検定の中身は `kentei.js` の GRADES
+- 編集用ログ: 1投ごとの時刻・○✕・合否・★見せ場・録画スタートを裏で全部残す（取り消し・リセットでも消えない。端末内＋Firebase `kentei_log`）。操作画面「記録」→「編集用CSVを保存」
+- `kentei_markers.py ログ.csv 動画... -o 出力.fcpxml` で、動画の撮影時刻と突き合わせてFCPのマーカー（○✕・合格・★）付きFCPXMLを作る（時計のずれは --offset 秒）
