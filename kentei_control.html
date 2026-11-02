@@ -70,11 +70,12 @@
 </div>
 <div class="row">
   <button id="undo">↶ 1つ戻す</button>
+  <button id="timeSw"></button>
 </div>
 <div id="toast" class="toast"></div>
 
 <details>
-  <summary>表示・音</summary>
+  <summary>表示</summary>
   <div class="set">
     <label><input type="checkbox" data-show="timer"> タイマー</label>
     <label><input type="checkbox" data-show="hud"> 今の級</label>
@@ -83,11 +84,6 @@
     <label><input type="checkbox" data-show="pace"> 目安との差</label>
   </div>
   <div class="set">表示の大きさ <button id="sizeDn">小さく</button> <b id="sizeV"></b> <button id="sizeUp">大きく</button></div>
-  <div class="set">
-    <label><input type="checkbox" data-sfx="control"> この端末で音</label>
-    <label><input type="checkbox" data-sfx="overlay"> オーバーレイで音</label>
-  </div>
-  <p class="hint">PRISM Liveなどのスマホ録画はWebページの音を拾えない。音を録画に入れたいときは「この端末で音」をONにしてマイクの近くで鳴らすか、編集で後から入れる。</p>
 </details>
 
 <details>
@@ -113,19 +109,10 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="kentei.js?v=7"></script>
+<script src="kentei.js?v=8"></script>
 <script>
   const $ = (id) => document.getElementById(id);
   let S = loadState();
-
-  // ── 効果音（この端末） ──
-  const SOUNDS = makeSounds(["throw_clear", "throw_miss", "start"]);
-  function playSfx(name) {
-    if (!S.sfx.control || !SOUNDS[name]) return;
-    const a = SOUNDS[name].cloneNode();
-    a.volume = Math.max(0, Math.min(1, S.sfx.vol));
-    a.play().catch(() => {});
-  }
 
   // ── 取り消し用の履歴（この端末だけ） ──
   const UNDO_KEY = "kentei_rta_undo";
@@ -145,7 +132,6 @@
   function start() {
     commit(() => { S.start = Date.now(); S.stop = 0; fx("go", "START", "川西モルック検定 RTA　12級から"); });
     logEvent({ ev: "start", at: S.start, el: 0, g: S.grade, try: 1 });
-    playSfx("start");
   }
 
   function mark(v) {
@@ -165,7 +151,6 @@
         fx("fail", "FAILED", `${S.grade}級 ${S.tries[S.grade] || 1}回目 不合格（${t.c}/7）`);
       }
     });
-    playSfx(v === "c" ? "throw_clear" : "throw_miss");
   }
 
   function next() {
@@ -229,7 +214,7 @@
 
     document.querySelectorAll("[data-show]").forEach((c) => { c.checked = S.show[c.dataset.show] !== false; });
     if (document.activeElement !== $("limit")) $("limit").value = S.limit || "18:00:00";
-    document.querySelectorAll("[data-sfx]").forEach((c) => { c.checked = !!S.sfx[c.dataset.sfx]; });
+    $("timeSw").textContent = S.show.timer !== false ? "⏱ 時間を隠す" : "⏱ 時間を出す";
     $("sizeV").textContent = Math.round(S.size * 100) + "%";
     $("log").textContent = logText() || "まだ記録なし";
   }
@@ -246,11 +231,12 @@
 
   // ── 設定 ──
   document.querySelectorAll("[data-show]").forEach((c) => c.onchange = () => commit(() => { S.show[c.dataset.show] = c.checked; }));
-  document.querySelectorAll("[data-sfx]").forEach((c) => c.onchange = () => commit(() => { S.sfx[c.dataset.sfx] = c.checked; }));
   const resize = (d) => commit(() => { S.size = Math.min(1.2, Math.max(0.4, Math.round((S.size + d) * 20) / 20)); });
   $("sizeDn").onclick = () => resize(-0.05);
   $("sizeUp").onclick = () => resize(0.05);
   $("undo").onclick = undo;
+  // 時間表示（左上のタイマー）のON/OFFをすぐ切り替える。「表示」の「タイマー」と同じ
+  $("timeSw").onclick = () => commit(() => { S.show.timer = S.show.timer === false; });
   function toast(t) { const el = $("toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast.tm); toast.tm = setTimeout(() => el.classList.remove("on"), 1500); }
   // 見せ場（ハプニング・いいリアクション・面白いひと言）と、カメラの録画を回した瞬間を記録する。編集でマーカーになる
   $("star").onclick = () => { logEvent({ ev: "star", el: elapsed(S), g: S.grade, try: S.tries[S.grade] || 1, n: S.log.length }); toast("★ 見せ場を記録"); };
@@ -301,7 +287,7 @@
   $("reset").onclick = () => {
     if (!confirm("タイマーも記録も全部消す？")) return;
     if (!confirm("本当に消す？（戻せない）")) return;
-    const keep = { show: S.show, sfx: S.sfx, size: S.size };
+    const keep = { show: S.show, size: S.size };
     S = Object.assign(blankState(), keep);
     undoStack = []; try { localStorage.removeItem(UNDO_KEY); } catch (e) {}
     saveState(S); render();
