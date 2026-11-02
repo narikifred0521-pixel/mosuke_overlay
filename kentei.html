@@ -43,6 +43,13 @@
   .tm-time.wait { color: var(--mute); }
   .tm-time.goal { color: var(--orange); }
   .tm-sub { font-size: 22px; color: var(--blue-d); font-weight: 800; margin-top: 2px; white-space: nowrap; }
+  .tm-left { display: flex; align-items: baseline; gap: 12px; margin-top: 6px; padding-top: 8px; border-top: 2px solid var(--line); white-space: nowrap; }
+  .tm-left span { font-size: 22px; font-weight: 800; color: var(--mute); }
+  .tm-left b { font-size: 40px; color: var(--blue-d); }
+  .tm-left.warn span, .tm-left.warn b { color: var(--orange); }
+  .tm-left.warn b { animation: beat 1s infinite; }
+  .tm-left.over span, .tm-left.over b { color: var(--orange); }
+  @keyframes beat { 50% { opacity: .45; } }
 
   /* ── 級の進み（右上） ── */
   #progress { right: 30px; top: 30px; padding: 14px 18px 12px; }
@@ -129,7 +136,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="kentei.js?v=3"></script>
+<script src="kentei.js?v=4"></script>
 <script>
   const PARAMS = new URLSearchParams(location.search);
   if (PARAMS.get("bg")) document.body.classList.add("bg");
@@ -172,7 +179,19 @@
     $("timer").innerHTML = `
       <div class="tm-head">川西モルック検定 RTA<small>全12級</small></div>
       <div class="tm-body"><div class="tm-time num ${cls}">${fmtTime(ms)}</div>
-      <div class="tm-sub">${S.stop ? "全級クリア！" : S.start ? `${startClock} スタート ／ 合格 ${doneN} / 12` : "スタート前"}</div></div>`;
+      <div class="tm-sub">${S.stop ? "全級クリア！" : S.start ? `${startClock} スタート ／ 合格 ${doneN} / 12` : "スタート前"}</div>
+      ${leftHtml()}</div>`;
+  }
+
+  // 締切までの残り。1時間を切ったらオレンジで点滅、過ぎたら「タイムオーバー」
+  function leftHtml() {
+    if (S.show.left === false) return "";
+    const left = remaining(S), lim = String(S.limit || "18:00").slice(0, 5);
+    const label = lim === "23:59" ? "今日中まで" : `${lim}まで`;
+    if (left <= 0) return `<div class="tm-left over"><span>${label}</span><b class="num">タイムオーバー</b></div>`;
+    const cls = S.stop ? "" : left < 3600 * 1000 ? "warn" : "";
+    if (S.stop) return `<div class="tm-left"><span>締切まで</span><b class="num">${fmtTime(left)}</b><span>残してクリア</span></div>`;
+    return `<div class="tm-left ${cls}"><span>${label} 残り</span><b class="num">${fmtTime(left)}</b></div>`;
   }
 
   function renderProgress() {
@@ -240,7 +259,7 @@
     render(popIdx);
     playFx();
   });
-  setInterval(() => { if (S.start && !S.stop) renderTimer(); }, 250);
+  setInterval(() => { if (!S.stop) renderTimer(); }, 250);
 </script>
 </body>
 </html>

@@ -32,7 +32,7 @@ const K_STORE = "kentei_rta_state_v1";
 const K_ROOM = "kentei_rta_room";
 
 function blankState() {
-  return { start: 0, stop: 0, grade: 12, log: [], tries: { 12: 1 }, done: {}, hist: [],
+  return { start: 0, stop: 0, limit: "18:00:00", grade: 12, log: [], tries: { 12: 1 }, done: {}, hist: [],
     show: { timer: true, hud: true, progress: true }, sfx: { control: true, overlay: true, vol: 0.8 }, fx: null, t: Date.now() };
 }
 
@@ -65,6 +65,20 @@ function tally(log) {
 function elapsed(S, now = Date.now()) {
   if (!S.start) return 0;
   return (S.stop || now) - S.start;
+}
+
+// 締切の時刻（ms）。スタートした日の limit（"HH:MM[:SS]"）。スタート前は今日の limit
+function deadline(S) {
+  const [h, m, sec] = String(S.limit || "18:00:00").split(":").map(Number);
+  const d = new Date(S.start || Date.now());
+  d.setHours(h, m, sec || 0, 999);
+  if (S.start && d.getTime() <= S.start) d.setDate(d.getDate() + 1); // 締切がスタートより前なら翌日の同じ時刻
+  return d.getTime();
+}
+
+// 締切までの残り（ゴールしたらゴール時点の残り）
+function remaining(S, now = Date.now()) {
+  return deadline(S) - (S.stop || now);
 }
 
 function fmtTime(ms, withSec = true) {

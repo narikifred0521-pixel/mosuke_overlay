@@ -61,6 +61,7 @@
 <div class="top"><span>川西モルック検定 RTA 操作</span><span id="conn" class="conn"></span></div>
 <div id="time" class="time"></div>
 <div id="sub" class="sub"></div>
+<div id="left" class="sub"></div>
 <div id="main"></div>
 
 <div class="row">
@@ -78,6 +79,7 @@
     <label><input type="checkbox" data-show="timer"> タイマー</label>
     <label><input type="checkbox" data-show="hud"> 今の級</label>
     <label><input type="checkbox" data-show="progress"> 級の進み</label>
+    <label><input type="checkbox" data-show="left"> 残り時間</label>
   </div>
   <div class="set">
     <label><input type="checkbox" data-sfx="control"> この端末で音</label>
@@ -97,6 +99,7 @@
   <summary>設定・直す</summary>
   <div class="set">ルーム名 <input id="room" type="text" placeholder="例: kentei" style="width:140px"> <button id="roomSave">保存して再読込</button></div>
   <p class="hint">オーバーレイ側は <span id="ovUrl"></span> を開く（同じルーム名で同期）。</p>
+  <div class="set">締切 <input id="limit" type="time" step="1"> <button id="limitSet">変える</button></div>
   <div class="set">開始時刻を直す <input id="startAt" type="time" step="1"> <button id="startSet">直す</button></div>
   <div class="set">級を直す <select id="jump"></select> <button id="jumpSet">この級にする</button></div>
   <p class="hint">「級を直す」は押し間違いの修正用。それより上の級は合格扱いのまま、下の級の合格は消える。</p>
@@ -105,7 +108,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="kentei.js?v=3"></script>
+<script src="kentei.js?v=4"></script>
 <script>
   const $ = (id) => document.getElementById(id);
   let S = loadState();
@@ -191,6 +194,7 @@
     const ms = elapsed(S), t = tally(S.log), gi = gradeInfo(S.grade);
     $("time").className = `time ${!S.start ? "wait" : S.stop ? "goal" : ""}`;
     $("time").textContent = fmtTime(ms);
+    showLeft();
     $("sub").textContent = S.stop ? "全級クリア！" : S.start ? `合格 ${Object.keys(S.done).length} / 12` : "スタート前";
 
     let html = "";
@@ -218,7 +222,8 @@
     on("bStart", start); on("bOk", () => mark("c")); on("bNg", () => mark("m")); on("bNext", next); on("bRetry", retry);
     $("undo").disabled = !undoStack.length;
 
-    document.querySelectorAll("[data-show]").forEach((c) => { c.checked = !!S.show[c.dataset.show]; });
+    document.querySelectorAll("[data-show]").forEach((c) => { c.checked = S.show[c.dataset.show] !== false; });
+    if (document.activeElement !== $("limit")) $("limit").value = S.limit || "18:00:00";
     document.querySelectorAll("[data-sfx]").forEach((c) => { c.checked = !!S.sfx[c.dataset.sfx]; });
     $("log").textContent = logText() || "まだ記録なし";
   }
@@ -298,7 +303,13 @@
   fbStatusCbs.push(showConn); showConn();
   onState((ns) => { S = ns; render(); });
   render();
-  setInterval(() => { if (S.start && !S.stop) $("time").textContent = fmtTime(elapsed(S)); }, 250);
+  function showLeft() {
+    const left = remaining(S);
+    $("left").textContent = left <= 0 ? `締切 ${String(S.limit).slice(0, 5)}　タイムオーバー` : `締切 ${String(S.limit).slice(0, 5)} まで 残り ${fmtTime(left)}`;
+    $("left").style.color = left < 3600 * 1000 ? "var(--red)" : "";
+  }
+  $("limitSet").onclick = () => { const v = $("limit").value; if (v) commit(() => { S.limit = v.length === 5 ? v + ":00" : v; }); };
+  setInterval(() => { if (!S.stop) { if (S.start) $("time").textContent = fmtTime(elapsed(S)); showLeft(); } }, 250);
 </script>
 </body>
 </html>
