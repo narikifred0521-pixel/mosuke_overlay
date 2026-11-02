@@ -10,6 +10,7 @@
   オプション:
     --offset 秒   動画の時計がスマホ（ログ）よりずれているとき。動画の時計が3秒進んでいれば --offset 3
     --end         メタデータの時刻が「録画の終わり」のカメラ用（開始＝その時刻−尺 にする）
+    --local       メタデータの時刻が「日本時間なのにUTCの印が付いている」カメラ用（DJIに多い）。9時間ずれていたらこれ
     --name 名前   FCPのプロジェクト名
     --rough       粗編集モード：見せ場だけ等速で残し、ほかは早送り（下の「粗編集」）
     --speed 倍    早送りの速さ（既定 8倍）。--max-fast 秒 … 早送り1区間の長さの上限（既定 20秒。長い待ちはもっと速くなる）
@@ -56,12 +57,14 @@ def probe(path):
     return {"fps": fps, "dur": dur, "w": int(v["width"]), "h": int(v["height"]), "tc": tc, "created": created, "audio": has_audio}
 
 
-def parse_created(s):
+def parse_created(s, local=False):
     # iPhone: 2026-11-03T05:01:02+0900 ／ 他: 2026-11-03T20:01:02.000000Z（UTC）
     s = s.strip().replace("Z", "+00:00")
     if len(s) >= 5 and (s[-5] in "+-") and s[-3] != ":":
         s = s[:-2] + ":" + s[-2:]
     d = datetime.fromisoformat(s)
+    if local:  # 書いてある数字をそのまま日本時間として読む
+        return d.replace(tzinfo=None).astimezone()
     if d.tzinfo is None:
         d = d.replace(tzinfo=timezone.utc)
     return d.astimezone()  # Macのローカル時刻（日本時間）にそろえる
@@ -162,6 +165,7 @@ def main():
     ap.add_argument("-o", "--out", required=True)
     ap.add_argument("--offset", type=float, default=0.0, help="動画の時計がログより何秒進んでいるか")
     ap.add_argument("--end", action="store_true", help="メタデータの時刻が録画の終わりのカメラ")
+    ap.add_argument("--local", action="store_true", help="時刻がUTC表記の日本時間（DJIなど）")
     ap.add_argument("--name", default="川西検定RTA_マーカー付き")
     ap.add_argument("--rough", action="store_true", help="見せ場だけ等速、ほかは早送りの粗編集を作る")
     ap.add_argument("--speed", type=float, default=8.0)
@@ -175,7 +179,7 @@ def main():
         info = probe(p)
         if not info["created"]:
             sys.exit(f"撮影時刻が読めない: {p.name}（--offset では直せないので、ファイル名か別のカメラで確認して）")
-        start = parse_created(info["created"])
+        start = parse_created(info["created"], a.local)
         if a.end:
             start -= timedelta(seconds=info["dur"])
         start -= timedelta(seconds=a.offset)
