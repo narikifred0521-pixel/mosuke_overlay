@@ -93,3 +93,11 @@ python3 video_sfx.py 録画.mov
   ".write": true
 }
 ```
+
+## 川西モルック検定RTA（2026-11-02追加）
+
+MöSUKEとは別ページ。12級→1級を「12投中7本」で順に合格していくタイムアタック用。
+
+- 操作: `kentei_control.html?room=ルーム名`（スマホ。○／✕、合格で「次へ」、不合格で「もう一度」、1つ戻す）
+- オーバーレイ: `kentei.html?room=ルーム名`（左上タイマー・右上12級の進み・右下に今の級と○✕）
+- 同期は Firebase の `mosuke_overlay/<room>/kentei`。検定の中身は `kentei.js` の GRADES
