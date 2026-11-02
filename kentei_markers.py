@@ -11,7 +11,14 @@
     --offset 秒   動画の時計がスマホ（ログ）よりずれているとき。動画の時計が3秒進んでいれば --offset 3
     --end         メタデータの時刻が「録画の終わり」のカメラ用（開始＝その時刻−尺 にする）
     --name 名前   FCPのプロジェクト名
+    --rough       粗編集モード：見せ場だけ等速で残し、ほかは早送り（下の「粗編集」）
+    --speed 倍    早送りの速さ（既定 8倍）。--max-fast 秒 … 早送り1区間の長さの上限（既定 20秒。長い待ちはもっと速くなる）
+    --drop        早送りせずに切り捨てる（等速の見せ場だけをつなぐ）
   動画は撮影順に並べてタイムラインに置く。ログの範囲に入らない動画もそのまま並べる（マーカーなし）。
+
+粗編集（--rough）で等速のまま残すところ:
+  合格した回の最後の3投／合格・ゴールのリアクション／不合格を決めた最後の1投／★見せ場の前後／級の始まり・やり直しの直後
+  それ以外（不合格の回の途中、拾いに行く・並べ直す時間）は早送り（または --drop で切る）
 
 マーカーの種類:
   ふつうのマーカー … 1投ごと（例「11級 1回目 3投目 ○ 2/7」）
@@ -113,6 +120,41 @@ def marker_xml(kind, r):
     return "marker", f"{kind} {head}", None
 
 
+def keep_windows(log, c_start, dur):
+    """粗編集で等速のまま残す区間（動画の中の秒）を返す。重なりはまとめる"""
+    # 挑戦ごと（級・回目）に投擲を集め、結果（合格／不合格）を付ける
+    att = {}
+    for t, r in log:
+        key = (r["級"], r["回目"])
+        a = att.setdefault(key, {"throws": [], "end": None, "res": None})
+        if r["種類"] == "投擲":
+            a["throws"].append(t)
+        elif r["種類"] in ("合格", "ゴール", "不合格"):
+            a["end"], a["res"] = t, r["種類"]
+    sec = lambda t: (t - c_start).total_seconds()
+    w = []
+    for a in att.values():
+        if a["res"] in ("合格", "ゴール"):
+            for t in a["throws"][-3:]:
+                w.append((sec(t) - 5, sec(t) + 3))          # 合格した回の最後の3投
+            w.append((sec(a["end"]) - 2, sec(a["end"]) + 8))  # 合格のリアクション
+        elif a["res"] == "不合格" and a["throws"]:
+            w.append((sec(a["throws"][-1]) - 5, sec(a["end"]) + 6))  # 不合格を決めた最後の1投
+    for t, r in log:
+        if r["種類"] == "★見せ場":
+            w.append((sec(t) - 10, sec(t) + 5))
+        elif r["種類"] in ("スタート", "次の級へ", "やり直し"):
+            w.append((sec(t) - 2, sec(t) + 10))
+    w = sorted((max(0, x), min(dur, y)) for x, y in w if y > 0 and x < dur)
+    out = []
+    for x, y in w:
+        if out and x <= out[-1][1] + 2:   # 2秒以内のすき間はつなげる
+            out[-1] = (out[-1][0], max(out[-1][1], y))
+        else:
+            out.append((x, y))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("csv")
@@ -121,6 +163,10 @@ def main():
     ap.add_argument("--offset", type=float, default=0.0, help="動画の時計がログより何秒進んでいるか")
     ap.add_argument("--end", action="store_true", help="メタデータの時刻が録画の終わりのカメラ")
     ap.add_argument("--name", default="川西検定RTA_マーカー付き")
+    ap.add_argument("--rough", action="store_true", help="見せ場だけ等速、ほかは早送りの粗編集を作る")
+    ap.add_argument("--speed", type=float, default=8.0)
+    ap.add_argument("--max-fast", type=float, default=20.0)
+    ap.add_argument("--drop", action="store_true", help="早送りせずに切る")
     a = ap.parse_args()
 
     clips = []
@@ -166,10 +212,48 @@ def main():
                 extra += f' posterOffset="0s"' if kind == "chapter" else ""
                 ms.append(f'<{tag} start="{rt(f, fps)}" duration="{fd_s}" value="{escape(name)}"{extra}/>')
         total_markers += len(ms)
-        report.append(f'{c["path"].name}: 開始 {c["start"].strftime("%H:%M:%S")} 尺 {c["dur"] / 60:.1f}分 → マーカー {len(ms)}個')
-        spine.append(f'<asset-clip ref="{rid}" offset="{rt(offset_frames, fps)}" name="{escape(c["path"].stem)}" start="{rt(tc0, fps)}" '
-                     f'duration="{rt(frames, fps)}" format="r1" tcFormat="NDF">' + "".join(ms) + "</asset-clip>")
-        offset_frames += frames
+        if not a.rough:
+            report.append(f'{c["path"].name}: 開始 {c["start"].strftime("%H:%M:%S")} 尺 {c["dur"] / 60:.1f}分 → マーカー {len(ms)}個')
+            spine.append(f'<asset-clip ref="{rid}" offset="{rt(offset_frames, fps)}" name="{escape(c["path"].stem)}" start="{rt(tc0, fps)}" '
+                         f'duration="{rt(frames, fps)}" format="r1" tcFormat="NDF">' + "".join(ms) + "</asset-clip>")
+            offset_frames += frames
+            continue
+
+        # ── 粗編集：見せ場は等速、そのあいだは早送り（--drop なら切る） ──
+        F = float(fps)
+        keeps = keep_windows(log, c_start, c["dur"])
+        segs, pos = [], 0.0
+        for x, y in keeps:
+            if x - pos > 1:
+                segs.append(("fast", pos, x))
+            segs.append(("keep", x, y))
+            pos = y
+        if c["dur"] - pos > 1:
+            segs.append(("fast", pos, c["dur"]))
+        kept = fast_out = 0.0
+        for kind, x, y in segs:
+            f0, f1 = round(x * F), round(y * F)
+            if f1 <= f0:
+                continue
+            if kind == "keep":
+                inside = [m for m in ms if f0 + tc0 <= int(Fraction(m.split('start="')[1].split('s"')[0]) / (1 / fps)) < f1 + tc0]
+                spine.append(f'<asset-clip ref="{rid}" offset="{rt(offset_frames, fps)}" name="{escape(c["path"].stem)}" start="{rt(tc0 + f0, fps)}" '
+                             f'duration="{rt(f1 - f0, fps)}" format="r1" tcFormat="NDF">' + "".join(inside) + "</asset-clip>")
+                offset_frames += f1 - f0
+                kept += (f1 - f0) / F
+            elif not a.drop:
+                n = f1 - f0
+                k = max(a.speed, n / F / a.max_fast)   # 長い待ちは max-fast 秒に収まるまで速くする
+                out_n = max(1, round(n / k))
+                # timeMap：新しい時間（time）→ 元の時間（value）。クリップの始まり（tc0+f0）を基準に直線で速める
+                tm = (f'<timeMap><timept time="{rt(tc0 + f0, fps)}" value="{rt(tc0 + f0, fps)}" interp="linear"/>'
+                      f'<timept time="{rt(tc0 + f0 + out_n, fps)}" value="{rt(tc0 + f1, fps)}" interp="linear"/></timeMap>')
+                spine.append(f'<asset-clip ref="{rid}" offset="{rt(offset_frames, fps)}" name="{escape(c["path"].stem)} 早送り×{k:.0f}" '
+                             f'start="{rt(tc0 + f0, fps)}" duration="{rt(out_n, fps)}" format="r1" tcFormat="NDF">{tm}'
+                             f'<adjust-volume amount="-96dB"/></asset-clip>')
+                offset_frames += out_n
+                fast_out += out_n / F
+        report.append(f'{c["path"].name}: {c["dur"] / 60:.1f}分 → 等速 {kept / 60:.1f}分＋早送り {fast_out / 60:.1f}分')
 
     xml = ('<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE fcpxml>\n<fcpxml version="1.10">\n<resources>\n' + "\n".join(res) +
            f'\n</resources>\n<library>\n<event name="{escape(a.name)}">\n<project name="{escape(a.name)}">\n'
@@ -178,6 +262,8 @@ def main():
     Path(a.out).write_text(xml, encoding="utf-8")
     print("\n".join(report))
     print(f"ログ {len(log)}行のうち、マーカーにしたもの {total_markers}個 → {a.out}")
+    if a.rough:
+        print(f"粗編集の長さ: {offset_frames / float(fps) / 60:.1f}分（早送りは無音。FCPでの速さの読み込みは要確認）")
     if total_markers == 0:
         print("⚠ マーカーが1つも入らなかった。動画とスマホの時計のずれ（--offset）か、録画の終わりの時刻を持つカメラ（--end）を確認して")
 
