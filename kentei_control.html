@@ -80,6 +80,7 @@
     <label><input type="checkbox" data-show="hud"> 今の級</label>
     <label><input type="checkbox" data-show="progress"> 級の進み</label>
     <label><input type="checkbox" data-show="left"> 残り時間</label>
+    <label><input type="checkbox" data-show="pace"> 目安との差</label>
   </div>
   <div class="set">
     <label><input type="checkbox" data-sfx="control"> この端末で音</label>
@@ -97,6 +98,9 @@
 
 <details>
   <summary>設定・直す</summary>
+  <div class="set">目安（スタートから各級に合格するまでの累計分。12級→1級の順）</div>
+  <div class="set"><input id="pace" type="text" style="width:100%"> <button id="paceSet">目安を変える</button></div>
+  <div id="paceTable" class="log hint"></div>
   <div class="set">ルーム名 <input id="room" type="text" placeholder="例: kentei" style="width:140px"> <button id="roomSave">保存して再読込</button></div>
   <p class="hint">オーバーレイ側は <span id="ovUrl"></span> を開く（同じルーム名で同期）。</p>
   <div class="set">締切 <input id="limit" type="time" step="1"> <button id="limitSet">変える</button></div>
@@ -108,7 +112,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="kentei.js?v=4"></script>
+<script src="kentei.js?v=5"></script>
 <script>
   const $ = (id) => document.getElementById(id);
   let S = loadState();
@@ -154,7 +158,7 @@
         S.done[S.grade] = now;
         S.hist.push({ g: S.grade, try: S.tries[S.grade] || 1, log: S.log.slice(), r: "pass", at: now });
         if (S.grade === 1) { S.stop = S.start + now; fx("big final", "COMPLETE!", `川西モルック検定 全12級クリア　${fmtTime(now)}`); }
-        else fx("", "CLEAR!", `${S.grade}級 ${gi.name} 合格${S.grade === 5 ? "（川西モルックの会 入会資格）" : ""}　${fmtTime(now)}`);
+        else fx("", "CLEAR!", `${S.grade}級 ${gi.name} 合格${S.grade === 5 ? "（川西モルックの会 入会資格）" : ""}　${fmtTime(now)}（目安${fmtDiff(paceDiff(S, S.grade))}）`);
       } else if (t.st === "fail") {
         S.hist.push({ g: S.grade, try: S.tries[S.grade] || 1, log: S.log.slice(), r: "fail", at: now });
         fx("fail", "FAILED", `${S.grade}級 ${S.tries[S.grade] || 1}回目 不合格（${t.c}/7）`);
@@ -194,7 +198,7 @@
     const ms = elapsed(S), t = tally(S.log), gi = gradeInfo(S.grade);
     $("time").className = `time ${!S.start ? "wait" : S.stop ? "goal" : ""}`;
     $("time").textContent = fmtTime(ms);
-    showLeft();
+    showLeft(); showPace();
     $("sub").textContent = S.stop ? "全級クリア！" : S.start ? `合格 ${Object.keys(S.done).length} / 12` : "スタート前";
 
     let html = "";
@@ -308,6 +312,21 @@
     $("left").textContent = left <= 0 ? `締切 ${String(S.limit).slice(0, 5)}　タイムオーバー` : `締切 ${String(S.limit).slice(0, 5)} まで 残り ${fmtTime(left)}`;
     $("left").style.color = left < 3600 * 1000 ? "var(--red)" : "";
   }
+  function showPace() {
+    if (document.activeElement !== $("pace")) $("pace").value = S.pace.join(",");
+    const base = S.start || (() => { const d = new Date(); d.setHours(5, 0, 0, 0); return d.getTime(); })();
+    $("paceTable").textContent = GRADES.map((x) => {
+      const at = new Date(base + paceMs(S, x.g)).toLocaleTimeString("ja-JP", { hour: "numeric", minute: "2-digit" });
+      const res = S.done[x.g] != null ? `　実際 ${fmtTime(S.done[x.g], false)}（${fmtDiff(paceDiff(S, x.g))}）` : "";
+      return `${String(x.g).padStart(2, " ")}級 目安 ${at}（${fmtTime(paceMs(S, x.g), false)}）${res}`;
+    }).join("\n") + (S.start ? "" : "\n※スタート前は5:00開始として表示");
+  }
+  $("paceSet").onclick = () => {
+    const a = $("pace").value.split(/[,、\s]+/).filter(Boolean).map(Number);
+    if (a.length !== 12 || a.some((x) => !(x > 0))) return alert("12個の数字（分）をカンマ区切りで");
+    if (a.some((x, i) => i && x <= a[i - 1])) return alert("後ろの級ほど大きい数字にして（累計の分）");
+    commit(() => { S.pace = a; });
+  };
   $("limitSet").onclick = () => { const v = $("limit").value; if (v) commit(() => { S.limit = v.length === 5 ? v + ":00" : v; }); };
   setInterval(() => { if (!S.stop) { if (S.start) $("time").textContent = fmtTime(elapsed(S)); showLeft(); } }, 250);
 </script>

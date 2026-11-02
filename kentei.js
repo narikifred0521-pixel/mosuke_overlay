@@ -21,6 +21,21 @@ const THROWS = 12;          // 1回の受検で投げる数
 const NEED = 7;             // 合格に必要な成功数
 const MAX_MISS = THROWS - NEED; // これを超えたら不合格（6本目のミスで決まる）
 
+// 目安ペース：スタートから各級に合格するまでの累計分（12級→1級の順）。操作画面の「目安」で変えられる
+// 初期値は 5:00スタート → 12級5:25 … 6級7:25 → 朝ごはん → 5級8:05 … 1級10:40 ゴール
+const DEFAULT_PACE = [25, 40, 60, 75, 95, 115, 145, 185, 210, 240, 280, 340];
+const paceMs = (S, g) => (S.pace || DEFAULT_PACE)[12 - g] * 60000;
+// その級の目安との差（ms）。合格済みなら合格時点、挑戦中なら今の時点。＋は遅れ
+function paceDiff(S, g, now = Date.now()) {
+  const t = S.done[g] != null ? S.done[g] : elapsed(S, now);
+  return t - paceMs(S, g);
+}
+function fmtDiff(ms) {
+  const t = Math.round(Math.abs(ms) / 1000), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), x = t % 60;
+  const p = (v) => String(v).padStart(2, "0");
+  return (ms > 0 ? "+" : "−") + (h ? `${h}:${p(m)}:${p(x)}` : `${m}:${p(x)}`);
+}
+
 const gradeInfo = (g) => GRADES.find((x) => x.g === g);
 
 // ── 状態 ─────────────────────────────────────────
@@ -32,7 +47,7 @@ const K_STORE = "kentei_rta_state_v1";
 const K_ROOM = "kentei_rta_room";
 
 function blankState() {
-  return { start: 0, stop: 0, limit: "18:00:00", grade: 12, log: [], tries: { 12: 1 }, done: {}, hist: [],
+  return { start: 0, stop: 0, limit: "18:00:00", pace: DEFAULT_PACE.slice(), grade: 12, log: [], tries: { 12: 1 }, done: {}, hist: [],
     show: { timer: true, hud: true, progress: true }, sfx: { control: true, overlay: true, vol: 0.8 }, fx: null, t: Date.now() };
 }
 
@@ -42,6 +57,8 @@ function normalize(s) {
   s = Object.assign(b, s || {});
   s.show = Object.assign(blankState().show, s.show);
   s.sfx = Object.assign(blankState().sfx, s.sfx);
+  s.pace = (Array.isArray(s.pace) ? s.pace : Object.values(s.pace || {})).map(Number);
+  if (s.pace.length !== 12 || s.pace.some((x) => !(x > 0))) s.pace = DEFAULT_PACE.slice();
   const toObj = (x) => {
     if (!x) return {};
     if (Array.isArray(x)) { const o = {}; x.forEach((v, i) => { if (v != null) o[i] = v; }); return o; }

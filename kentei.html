@@ -43,6 +43,10 @@
   .tm-time.wait { color: var(--mute); }
   .tm-time.goal { color: var(--orange); }
   .tm-sub { font-size: 22px; color: var(--blue-d); font-weight: 800; margin-top: 2px; white-space: nowrap; }
+  .tm-pace { display: flex; align-items: baseline; gap: 12px; margin-top: 6px; white-space: nowrap; }
+  .tm-pace span { font-size: 22px; font-weight: 800; color: var(--mute); }
+  .tm-pace b { font-size: 34px; }
+  .tm-pace b.ahead { color: var(--blue); } .tm-pace b.behind { color: var(--orange); }
   .tm-left { display: flex; align-items: baseline; gap: 12px; margin-top: 6px; padding-top: 8px; border-top: 2px solid var(--line); white-space: nowrap; }
   .tm-left span { font-size: 22px; font-weight: 800; color: var(--mute); }
   .tm-left b { font-size: 40px; color: var(--blue-d); }
@@ -136,7 +140,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="kentei.js?v=4"></script>
+<script src="kentei.js?v=5"></script>
 <script>
   const PARAMS = new URLSearchParams(location.search);
   if (PARAMS.get("bg")) document.body.classList.add("bg");
@@ -180,7 +184,16 @@
       <div class="tm-head">川西モルック検定 RTA<small>全12級</small></div>
       <div class="tm-body"><div class="tm-time num ${cls}">${fmtTime(ms)}</div>
       <div class="tm-sub">${S.stop ? "全級クリア！" : S.start ? `${startClock} スタート ／ 合格 ${doneN} / 12` : "スタート前"}</div>
-      ${leftHtml()}</div>`;
+      ${paceHtml()}${leftHtml()}</div>`;
+  }
+
+  // 目安ペースとの差。挑戦中は「今の級の目安」と今の差、ゴール後は最終の差
+  function paceHtml() {
+    if (!S.start || S.show.pace === false) return "";
+    const g = S.stop ? 1 : S.grade, d = paceDiff(S, g);
+    const target = new Date(S.start + paceMs(S, g)).toLocaleTimeString("ja-JP", { hour: "numeric", minute: "2-digit" });
+    const word = d > 0 ? "遅れ" : "早い";
+    return `<div class="tm-pace"><span>${S.stop ? "目安との差" : `${g}級の目安 ${target}`}</span><b class="num ${d > 0 ? "behind" : "ahead"}">${fmtDiff(d)}</b><span>${word}</span></div>`;
   }
 
   // 締切までの残り。1時間を切ったらオレンジで点滅、過ぎたら「タイムオーバー」
