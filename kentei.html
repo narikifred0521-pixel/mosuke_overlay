@@ -136,7 +136,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="kentei.js?v=8"></script>
+<script src="kentei.js?v=9"></script>
 <script>
   const PARAMS = new URLSearchParams(location.search);
   if (PARAMS.get("bg")) document.body.classList.add("bg");
@@ -155,13 +155,13 @@
 
   function renderTimer() {
     const ms = elapsed(S);
-    const cls = !S.start ? "wait" : S.stop ? "goal" : "";
+    const cls = !S.start || S.pause ? "wait" : S.stop ? "goal" : "";
     const doneN = Object.keys(S.done).length;
-    const startClock = S.start ? new Date(S.start).toLocaleTimeString("ja-JP", { hour: "numeric", minute: "2-digit" }) : "";
+    const startClock = S.start ? new Date(S.start0 || S.start).toLocaleTimeString("ja-JP", { hour: "numeric", minute: "2-digit" }) : "";
     $("timer").innerHTML = `
       <div class="tm-head">川西モルック検定 RTA<small>全12級</small></div>
       <div class="tm-body"><div class="tm-time num ${cls}">${fmtTime(ms)}</div>
-      <div class="tm-sub">${S.stop ? "全級クリア！" : S.start ? `${startClock} スタート ／ 合格 ${doneN} / 12` : "スタート前"}</div>
+      <div class="tm-sub">${S.stop ? "全級クリア！" : S.pause ? "⏸ 一時停止中" : S.start ? `${startClock} スタート ／ 合格 ${doneN} / 12` : "スタート前"}</div>
       ${paceHtml()}${leftHtml()}</div>`;
   }
 

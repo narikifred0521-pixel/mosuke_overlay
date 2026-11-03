@@ -72,6 +72,9 @@
   <button id="undo">↶ 1つ戻す</button>
   <button id="timeSw"></button>
 </div>
+<div class="row">
+  <button id="pauseSw"></button>
+</div>
 <div id="toast" class="toast"></div>
 
 <details>
@@ -109,7 +112,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="kentei.js?v=8"></script>
+<script src="kentei.js?v=9"></script>
 <script>
   const $ = (id) => document.getElementById(id);
   let S = loadState();
@@ -130,12 +133,12 @@
 
   // ── 操作 ──
   function start() {
-    commit(() => { S.start = Date.now(); S.stop = 0; fx("go", "START", "川西モルック検定 RTA　12級から"); });
+    commit(() => { S.start = S.start0 = Date.now(); S.pause = 0; S.stop = 0; fx("go", "START", "川西モルック検定 RTA　12級から"); });
     logEvent({ ev: "start", at: S.start, el: 0, g: S.grade, try: 1 });
   }
 
   function mark(v) {
-    if (!S.start || S.stop || tally(S.log).st !== "play") return;
+    if (!S.start || S.stop || S.pause || tally(S.log).st !== "play") return;
     commit(() => {
       S.log.push(v);
       const t = tally(S.log), gi = gradeInfo(S.grade), now = elapsed(S), tr = S.tries[S.grade] || 1;
@@ -182,10 +185,10 @@
   // ── 表示 ──
   function render() {
     const ms = elapsed(S), t = tally(S.log), gi = gradeInfo(S.grade);
-    $("time").className = `time ${!S.start ? "wait" : S.stop ? "goal" : ""}`;
+    $("time").className = `time ${!S.start || S.pause ? "wait" : S.stop ? "goal" : ""}`;
     $("time").textContent = fmtTime(ms);
     showLeft(); showPace();
-    $("sub").textContent = S.stop ? "全級クリア！" : S.start ? `合格 ${Object.keys(S.done).length} / 12` : "スタート前";
+    $("sub").textContent = S.stop ? "全級クリア！" : S.pause ? "⏸ 一時停止中（▶ 再開で続きから）" : S.start ? `合格 ${Object.keys(S.done).length} / 12` : "スタート前";
 
     let html = "";
     if (!S.start) {
@@ -214,6 +217,8 @@
 
     document.querySelectorAll("[data-show]").forEach((c) => { c.checked = S.show[c.dataset.show] !== false; });
     if (document.activeElement !== $("limit")) $("limit").value = S.limit || "18:00:00";
+    $("pauseSw").textContent = S.pause ? "▶ 再開（" + fmtTime(elapsed(S)) + " から）" : "⏸ タイマーを一時停止";
+    $("pauseSw").disabled = !S.start || !!S.stop;
     $("timeSw").textContent = S.show.timer !== false ? "⏱ 時間を隠す" : "⏱ 時間を出す";
     $("sizeV").textContent = Math.round(S.size * 100) + "%";
     $("log").textContent = logText() || "まだ記録なし";
@@ -221,7 +226,7 @@
 
   function logText() {
     const lines = [];
-    if (S.start) lines.push(`スタート ${new Date(S.start).toLocaleTimeString("ja-JP")}`);
+    if (S.start) lines.push(`スタート ${new Date(S.start0 || S.start).toLocaleTimeString("ja-JP")}`);
     for (const h of S.hist) {
       lines.push(`${String(h.g).padStart(2, " ")}級 ${h.try}回目 ${h.r === "pass" ? "合格" : "不合格"}  ${fmtTime(h.at)}  ${h.log.map((x) => (x === "c" ? "○" : "✕")).join("")}`);
     }
@@ -235,6 +240,21 @@
   $("sizeDn").onclick = () => resize(-0.05);
   $("sizeUp").onclick = () => resize(0.05);
   $("undo").onclick = undo;
+  // 一時停止（来客・休憩など）。再開すると止めていた時間はタイムに入らない
+  $("pauseSw").onclick = () => {
+    if (!S.start || S.stop) return;
+    const now = Date.now();
+    if (!S.pause) {
+      commit(() => { S.pause = now; });
+      logEvent({ ev: "pause", at: now, el: elapsed(S), g: S.grade, try: S.tries[S.grade] || 1, n: S.log.length });
+      toast("⏸ 一時停止");
+    } else {
+      const el = elapsed(S);
+      commit(() => { S.start += now - S.pause; S.pause = 0; });
+      logEvent({ ev: "resume", at: now, el, g: S.grade, try: S.tries[S.grade] || 1, n: S.log.length });
+      toast("▶ 再開");
+    }
+  };
   // 時間表示（左上のタイマー）のON/OFFをすぐ切り替える。「表示」の「タイマー」と同じ
   $("timeSw").onclick = () => commit(() => { S.show.timer = S.show.timer === false; });
   function toast(t) { const el = $("toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast.tm); toast.tm = setTimeout(() => el.classList.remove("on"), 1500); }
@@ -269,7 +289,7 @@
     const d = new Date(); d.setHours(h, m, s || 0, 0);
     if (d.getTime() > Date.now()) d.setDate(d.getDate() - 1);
     if (!confirm(`開始時刻を ${d.toLocaleString("ja-JP")} にする？`)) return;
-    commit(() => { const ms = elapsed(S); S.start = d.getTime(); if (S.stop) S.stop = S.start + ms; });
+    commit(() => { const ms = elapsed(S); S.start = S.start0 = d.getTime(); if (S.stop) S.stop = S.start + ms; if (S.pause) S.pause = S.start + ms; });
   };
 
   $("jump").innerHTML = GRADES.map((x) => `<option value="${x.g}">${x.g}級 ${x.name}</option>`).join("");
@@ -319,7 +339,7 @@
     commit(() => { S.pace = a; });
   };
   $("limitSet").onclick = () => { const v = $("limit").value; if (v) commit(() => { S.limit = v.length === 5 ? v + ":00" : v; }); };
-  setInterval(() => { if (!S.stop) { if (S.start) $("time").textContent = fmtTime(elapsed(S)); showLeft(); } }, 250);
+  setInterval(() => { if (!S.stop && !S.pause) { if (S.start) $("time").textContent = fmtTime(elapsed(S)); showLeft(); } }, 250);
 </script>
 </body>
 </html>

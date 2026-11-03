@@ -41,6 +41,8 @@ const gradeInfo = (g) => GRADES.find((x) => x.g === g);
 
 // ── 状態 ─────────────────────────────────────────
 // start/stop … タイマー（ms）。stop が入ったらゴール
+// pause … 一時停止した時刻（0なら動いている）。再開すると止めていたぶん start を後ろへずらす
+// start0 … 本当のスタート時刻（表示用。一時停止で start がずれても変わらない）
 // grade … 今の級。log … 今の挑戦の記録 ["c","m",...]。tries[g] … その級の何回目か
 // done[g] … 合格したときの経過ms。hist … 終わった挑戦の記録
 // fx … 演出 { type, text, sub, t }
@@ -48,7 +50,7 @@ const K_STORE = "kentei_rta_state_v1";
 const K_ROOM = "kentei_rta_room";
 
 function blankState() {
-  return { start: 0, stop: 0, limit: "18:00:00", pace: DEFAULT_PACE.slice(), grade: 12, log: [], tries: { 12: 1 }, done: {}, hist: [],
+  return { start: 0, start0: 0, pause: 0, stop: 0, limit: "18:00:00", pace: DEFAULT_PACE.slice(), grade: 12, log: [], tries: { 12: 1 }, done: {}, hist: [],
     show: { timer: true, hud: true, progress: true }, size: 0.75, fx: null, t: Date.now() };
 }
 
@@ -84,7 +86,7 @@ function tally(log) {
 
 function elapsed(S, now = Date.now()) {
   if (!S.start) return 0;
-  return (S.stop || now) - S.start;
+  return (S.stop || S.pause || now) - S.start;
 }
 
 // 締切の時刻（ms）。スタートした日の limit（"HH:MM[:SS]"）。スタート前は今日の limit
@@ -188,7 +190,7 @@ async function loadEvents() {
 function eventsCsv(evs) {
   const p = (x, n = 2) => String(x).padStart(n, "0");
   const clock = (ms) => { const d = new Date(ms); return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(), 3)}`; };
-  const name = { start: "スタート", throw: "投擲", pass: "合格", fail: "不合格", next: "次の級へ", retry: "やり直し", undo: "取り消し", goal: "ゴール", fix: "修正", star: "★見せ場", rec: "録画スタート" };
+  const name = { start: "スタート", pause: "一時停止", resume: "再開", throw: "投擲", pass: "合格", fail: "不合格", next: "次の級へ", retry: "やり直し", undo: "取り消し", goal: "ゴール", fix: "修正", star: "★見せ場", rec: "録画スタート" };
   const rows = [["時刻", "経過", "種類", "級", "回目", "投目", "結果", "成功数"]];
   for (const e of evs) {
     rows.push([clock(e.at), e.el != null ? fmtTime(e.el) : "", name[e.ev] || e.ev, e.g || "", e.try || "", e.n || "",
