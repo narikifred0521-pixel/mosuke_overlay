@@ -38,23 +38,36 @@ let LAYOUT = { hud: "br", hudX: 10, hudY: 20 }; // 種目HUDの位置と、画�
 let SFX = { on: true, vol: 0.8, where: "overlay" }; // 効果音を鳴らす端末
 const sfxHere = (kind) => SFX.on && (SFX.where === "both" || SFX.where === kind);
 
+// 第2回（2026-11-28）24名。番号＝ゼッケン＝挑戦順（ゼッケン編成ページ boards/main と同じ）。名前・肩書きは出場者発表動画のテロップ表
 let PLAYERS = [
-  { no: 1, name: "渡辺達也", title: "森下一派" },
-  { no: 2, name: "なぎ", title: "なぎちゃんず／ALLINマネージャー" },
+  { no: 1, name: "Mr. Joe", title: "選手権2026本戦ベスト32" },
+  { no: 2, name: "髙橋拓矢", title: "光が丘モルック部" },
   { no: 3, name: "ゆうやん", title: "初代木龍／JO2023優勝" },
-  { no: 4, name: "石田麻美", title: "" },
-  { no: 5, name: "石田隼也", title: "JO2024優勝／7出し公式記録保持者" },
-  { no: 6, name: "木下優樹", title: "キング" },
-  { no: 7, name: "田中凱也", title: "JO2026準優勝／象使い" },
-  { no: 8, name: "柿沼智文", title: "SASUKEインフルエンサー／世界大会2026準優勝" },
-  { no: 9, name: "ひできち", title: "選手権予選関東地区優勝" },
-  { no: 10, name: "古田優弥", title: "スキルチャレンジ世界2位／モルック研究家" },
-  { no: 11, name: "松原翔平", title: "2024年日本代表／JO2024優勝／Mr.MöSUKE" },
-  { no: 12, name: "横山航大", title: "JO2026優勝／靴のモルタ勤務／モルクール指導員／モスケ君" },
+  { no: 4, name: "たろう", title: "新潟からの挑戦" },
+  { no: 5, name: "田熊圭", title: "ナイモルランキング1位" },
+  { no: 6, name: "みぃーちゃん", title: "初代MöNOICH" },
+  { no: 7, name: "角本和史", title: "ASA CREW" },
+  { no: 8, name: "まさ", title: "世界大会2026準優勝" },
+  { no: 9, name: "濱新太", title: "全日本学生大会優勝・厚木シリーズ優勝" },
+  { no: 10, name: "とみー", title: "全日本学生大会 東西合同戦 優勝" },
+  { no: 11, name: "上平雄大", title: "選手権関東予選優勝" },
+  { no: 12, name: "ざわ", title: "モルマニ川崎優勝・葛飾優勝ほか" },
+  { no: 13, name: "石田隼也", title: "JO2024優勝／7出し公式記録保持者" },
+  { no: 14, name: "ひできち", title: "選手権予選関東地区優勝" },
+  { no: 15, name: "柿沼智文", title: "SASUKEインフルエンサー／世界大会2026準優勝" },
+  { no: 16, name: "岩下侑輝顕", title: "2025日本選手権6位" },
+  { no: 17, name: "ナッチャン", title: "Kiitos・モルマニ・葛飾など優勝" },
+  { no: 18, name: "内田耕平", title: "pöchicom" },
+  { no: 19, name: "ヤマネコ", title: "名古屋から挑戦" },
+  { no: 20, name: "どぅ", title: "'24世界大会優勝／'25日本大会優勝" },
+  { no: 21, name: "落合剛", title: "2024日本ランキング個人1位／2024日本代表／2024日本大会優勝" },
+  { no: 22, name: "古田優弥", title: "スキルチャレンジ世界2位／モルック研究家" },
+  { no: 23, name: "松原翔平", title: "2024年日本代表／JO2024優勝／Mr.MöSUKE" },
+  { no: 24, name: "横山航大", title: "JO2026優勝／靴のモルタ勤務／モルクール指導員／モスケ君" },
 ];
 
 // ── 設定（操作パネルの「設定」タブで編集。上の値が初期値） ──────────
-const CFG_KEY = "mosuke_overlay_config_v1";
+const CFG_KEY = "mosuke_overlay_config_v2"; // v2＝第2回（v1は第1回の12人の設定）
 const DEFAULT_EVENTS = JSON.parse(JSON.stringify(EVENTS));
 const DEFAULT_PLAYERS = JSON.parse(JSON.stringify(PLAYERS));
 
@@ -157,7 +170,7 @@ applyConfig(loadConfig());
 // ── 状態 ─────────────────────────────────────────
 // S.rec[no][eventId] = { log: ["c","m",...] }  … 投擲ごとの記録（取り消しはpop）
 // S.fin[no] = { start, stop, score, streak, log: [点数...], dq: "" }
-const STORE_KEY = "mosuke_overlay_state_v1";
+const STORE_KEY = "mosuke_overlay_state_v2"; // v2＝第2回（第1回の記録が残らないように分けた）
 
 function blankState() {
   return {

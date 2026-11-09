@@ -318,8 +318,16 @@
     el.classList.toggle("hide", !S.show.player);
     el.innerHTML = `<div class="pl-status ${pg.out ? "out" : ""}">${pg.label}</div>
       <div class="pl-box"><div class="pl-no en">${String(p.no).padStart(2, "0")}</div>
-        <div class="pl-text">${p.title ? `<div class="pl-title">${p.title}</div>` : ""}<div class="pl-name">${p.name}</div></div></div>
+        <div class="pl-text">${p.title ? `<div class="pl-title"${titleStyle(p.title)}>${p.title}</div>` : ""}<div class="pl-name">${p.name}</div></div></div>
       <div class="pl-stripe"></div>`;
+  }
+
+  // 長い肩書き（第2回は3つ並ぶ人がいる）は…で切らずに文字を小さくして全部出す（最小16px）。
+  // 表示前は幅が測れないので、文字数から決める（全角1・半角0.6文字分、使える幅は約560px）
+  function titleStyle(t) {
+    const w = [...t].reduce((a, ch) => a + (/[\x20-\x7e]/.test(ch) ? 0.6 : 1), 0);
+    const fs = Math.max(16, Math.min(26, Math.floor(560 / Math.max(w, 1))));
+    return fs < 26 ? ` style="font-size:${fs}px"` : "";
   }
 
   function renderBoard() {
