@@ -345,7 +345,7 @@
       const { clears, misses, status } = evStatus(S, no, ev.id);
       const done = status === "clear" || status === "fail";
       $("op").innerHTML = head + `
-        <div class="cur-info">クリア <b>${clears}/${ev.steps.length}</b>（${ev.steps.join(" → ")}）　ミス <b>${misses}/${ev.miss}</b>まで</div>
+        <div class="cur-info">クリア <b>${clears}/${ev.steps.length}</b>（${ev.steps.join(" → ")}）　ミス <b>${misses}/${ev.miss}</b>まで${ev.perStep ? "（左右それぞれ）" : ""}</div>
         <div class="big"><button class="b-clear" id="bc" ${done ? "disabled" : ""}>✓ クリア</button><button class="b-miss" id="bm" ${done ? "disabled" : ""}>✕ ミス</button></div>
         <div class="sub"><button id="undo">↶ 1つ戻す</button><button class="next ${status === "clear" ? "hl" : ""}" id="next">次の種目へ →</button></div>`;
     }

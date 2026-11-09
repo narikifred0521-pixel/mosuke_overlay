@@ -12,6 +12,7 @@ const STAGES = [
 ];
 
 // steps = クリアしていく順番のラベル（数＝必要クリア数）、miss = 許されるミス数
+// perStep = true なら miss は「steps ごと」に数える（3-1・3-3は左右それぞれミス1回まで。第2回 2026-11-09 古田さん決定）
 let EVENTS = [
   { id: "1-1", stage: "1", name: "ステップバイステップ", kind: "順手", steps: ["4m", "6m", "8m"], miss: 3 },
   { id: "1-2", stage: "1", name: "ウッドボーン", kind: "縦", steps: ["3.5m", "4m", "4.5m"], miss: 3 },
@@ -22,9 +23,9 @@ let EVENTS = [
   { id: "2-2", stage: "2", name: "ナッシングハップン", kind: "その場取り", steps: ["1回"], miss: 2 },
   { id: "2-3", stage: "2", name: "オーバーザウォール", kind: "束裏飛ばし", steps: ["1回"], miss: 2 },
   { id: "2-4", stage: "2", name: "プレッシャーストレート", kind: "遠投系", steps: ["1回"], miss: 2 },
-  { id: "3-1", stage: "3", name: "デビルフック", kind: "曲げ系", steps: ["左", "右"], miss: 1 },
+  { id: "3-1", stage: "3", name: "デビルフック", kind: "曲げ系", steps: ["左", "右"], miss: 1, perStep: true },
   { id: "3-2", stage: "3", name: "デスエンド", kind: "12m遠投", steps: ["1回"], miss: 1 },
-  { id: "3-3", stage: "3", name: "クレイジータイニーウッド", kind: "ガチ端引っ掛け", steps: ["左", "右"], miss: 1 },
+  { id: "3-3", stage: "3", name: "クレイジータイニーウッド", kind: "ガチ端引っ掛け", steps: ["左", "右"], miss: 1, perStep: true },
   { id: "3-4", stage: "3", name: "キャッチザレインボー", kind: "7mふわり", steps: ["1回"], miss: 1 },
   { id: "F", stage: "F", name: "タイムアタック50", kind: "1分10秒以内", final: true },
 ];
@@ -238,7 +239,15 @@ function evStatus(S, no, id) {
   if (ev.final) return finStatus(S, no);
   const log = evLog(S, no, id);
   const clears = log.filter((x) => x === "c").length;
-  const misses = log.filter((x) => x === "m").length;
+  let misses = log.filter((x) => x === "m").length;
+  if (ev.perStep) {
+    // 今のstep（左→右）で何回ミスしたか。stepをクリアしたら0に戻る
+    misses = 0;
+    for (const x of log) {
+      if (x === "c") misses = 0;
+      else if (x === "m" && ++misses > ev.miss) break;
+    }
+  }
   let status = log.length ? "live" : "todo";
   if (clears >= ev.steps.length) status = "clear";
   else if (misses > ev.miss) status = "fail";
