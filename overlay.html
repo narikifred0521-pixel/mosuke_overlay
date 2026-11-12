@@ -189,7 +189,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="common.js?v=19"></script>
+<script src="common.js?v=20"></script>
 <script>
   const PARAMS = new URLSearchParams(location.search);
   if (PARAMS.get("bg")) document.body.classList.add("bg");
@@ -320,9 +320,23 @@
       <div class="pl-box"><div class="pl-no en">${String(p.no).padStart(2, "0")}</div>
         <div class="pl-text">${p.title ? `<div class="pl-title"${titleStyle(p.title)}>${p.title}</div>` : ""}<div class="pl-name">${p.name}</div></div></div>
       <div class="pl-stripe"></div>`;
+    fitTitle();
   }
 
-  // 長い肩書き（第2回は3つ並ぶ人がいる）は…で切らずに文字を小さくして全部出す（最小16px）。
+  // 文字数の見積もりだけだと数字・記号の多い肩書きが「…」になる（横山航大 11/12確認）ので、表示後に実際の幅で縮める
+  function fitTitle() {
+    const t = document.querySelector("#player .pl-title");
+    if (!t) return;
+    // scrollWidthは整数に丸められて0.4pxのはみ出しを見逃すので、文字の実寸（Range）で測る。画面の拡大縮小ぶんは割り戻す
+    const r = document.createRange();
+    r.selectNodeContents(t);
+    const textW = () => r.getBoundingClientRect().width / ((t.getBoundingClientRect().width / t.clientWidth) || 1);
+    let fs = parseFloat(getComputedStyle(t).fontSize);
+    while (textW() > t.clientWidth - 2 && fs > 14) { fs -= 1; t.style.fontSize = fs + "px"; }
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitTitle);
+
+  // 長い肩書き（第2回は3つ並ぶ人がいる）は…で切らずに文字を小さくして全部出す（見積もり→表示後に実測で詰める。最小14px）。
   // 表示前は幅が測れないので、文字数から決める（全角1・半角0.6文字分、使える幅は約560px）
   function titleStyle(t) {
     const w = [...t].reduce((a, ch) => a + (/[\x20-\x7e]/.test(ch) ? 0.6 : 1), 0);

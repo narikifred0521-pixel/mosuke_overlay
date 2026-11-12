@@ -92,7 +92,7 @@
 <header><img src="logo.png" alt="MöSUKE"><h1>操作パネル <span id="roomTag" style="color:var(--gold)"></span></h1><a href="overlay.html?bg=1" target="_blank">プレビュー（市松模様＝透過）↗</a></header>
 
 <section id="preview"><h2><span>いま配信に出ている表示</span><span style="color:var(--gray)">押し忘れの確認用</span></h2>
-  <div class="pv"><iframe id="pvFrame" src="overlay.html?only=hud&mute=1&v=19" scrolling="no"></iframe></div></section>
+  <div class="pv"><iframe id="pvFrame" src="overlay.html?only=hud&mute=1&v=20" scrolling="no"></iframe></div></section>
 
 <nav class="tabs"><button class="tab on" data-tab="op">操作</button><button class="tab" data-tab="cfg">設定</button></nav>
 <div id="pageOp">
@@ -157,7 +157,7 @@
 
   <section>
     <h2><span>スマホ同期（Firebase）</span><span id="fbStat"></span></h2>
-    <div class="frow" style="grid-template-columns:1fr 1fr"><input id="roomIn" placeholder="ルーム名（例: mosuke2026）"><button class="tg on" id="roomSave">この名前で同期</button></div>
+    <div class="frow" style="grid-template-columns:1fr 1fr"><input id="roomIn" placeholder="ルーム名（第2回: mosuke2）"><button class="tg on" id="roomSave">この名前で同期</button></div>
     <p class="hint">スマホとOBSで<b>同じルーム名</b>にすると、別の端末同士でも同期する（ルーム名は端末ごとに入れる）。空にして保存すると同期オフ。<br>
       <b style="color:var(--gold)">配信で使うURL（これをコピー）</b>: <span id="obsUrl" style="color:var(--white);word-break:break-all"></span><br>
       ※ URLに <code>bg=1</code> が付いていると市松模様の背景が出て透過しない。配信ではこのURLをそのまま使う。</p>
@@ -183,7 +183,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="common.js?v=19"></script>
+<script src="common.js?v=20"></script>
 <script>
   let S = loadState();
   const $ = (id) => document.getElementById(id);
@@ -537,7 +537,7 @@
       const j = JSON.parse(await file.text());
       const d = defaultConfig();
       C = { players: j.players || d.players, events: Object.assign(d.events, j.events || {}),
-        final: Object.assign(d.final, j.final || {}), layout: Object.assign(d.layout, j.layout || {}) };
+        final: Object.assign(d.final, j.final || {}), layout: Object.assign(d.layout, j.layout || {}), sfx: Object.assign(d.sfx, j.sfx || {}) };
       renderCfg(); cfgMsg("読み込みました（まだ保存していません）");
     } catch (err) { cfgMsg("⚠ ファイルを読めませんでした"); }
     e.target.value = "";

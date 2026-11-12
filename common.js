@@ -35,7 +35,7 @@ let FINAL_GOAL = 50;
 let FINAL_BURST = 25;   // 目標を超えたら戻る点数
 let FINAL_MISS_DQ = 3;  // この回数連続ミスで失格
 let LAYOUT = { hud: "br", hudX: 10, hudY: 20 }; // 種目HUDの位置と、画面の端からの余白（px・1920x1080基準）
-let SFX = { on: true, vol: 0.8, where: "overlay" }; // 効果音を鳴らす端末
+let SFX = { on: false, vol: 0.8, where: "overlay" }; // 効果音を鳴らす端末（第2回は録画のみ・SEは編集で後入れなので既定オフ）
 const sfxHere = (kind) => SFX.on && (SFX.where === "both" || SFX.where === kind);
 
 // 第2回（2026-11-28）24名。番号＝ゼッケン＝挑戦順（ゼッケン編成ページ boards/main と同じ）。名前・肩書きは出場者発表動画のテロップ表
@@ -76,7 +76,7 @@ function defaultConfig() {
     players: JSON.parse(JSON.stringify(DEFAULT_PLAYERS)),
     events: Object.fromEntries(DEFAULT_EVENTS.filter((e) => !e.final).map((e) => [e.id, { name: e.name, steps: e.steps, miss: e.miss }])),
     final: { limitSec: 70, goal: 50, burst: 25, missDq: 3 },
-    sfx: { on: true, vol: 0.8, where: "overlay" }, // where: overlay / control / both / none
+    sfx: { on: false, vol: 0.8, where: "overlay" }, // 第2回は既定オフ（録画→insert-mosuke-sfxで後入れ）。where: overlay / control / both / none
     layout: { hud: "br", hudX: 10, hudY: 20 },
   };
 }
@@ -137,7 +137,7 @@ function onConfig(cb) {
 
 // ── Firebase 同期（ルーム名があるときだけ） ──────────────
 const FB_URL = "https://morumasa-score-4818b-default-rtdb.asia-southeast1.firebasedatabase.app";
-const ROOM_KEY = "mosuke_overlay_room";
+const ROOM_KEY = "mosuke_overlay_room_v2"; // v2＝第2回（端末に残った第1回のルーム名 MSK2026 等を使わない。第2回は ?room=mosuke2）
 const ROOM = (new URLSearchParams(location.search).get("room") || (() => { try { return localStorage.getItem(ROOM_KEY); } catch (e) { return ""; } })() || "")
   .replace(/[^\w-]/g, "");
 let fbDb = null;
